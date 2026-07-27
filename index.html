@@ -183,6 +183,7 @@
             </div>
         </section>
 
+        <!-- Pass Result View -->
         <section id="viewPassResult" class="hidden space-y-6">
             <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-xl mx-auto shadow-2xl text-center space-y-6">
                 <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 text-2xl mb-1">
@@ -191,18 +192,15 @@
                 
                 <h2 class="text-2xl font-black text-white">¡Vehículo Registrado Con Éxito!</h2>
 
-                <!-- Big Code Badge -->
                 <div class="bg-slate-950 border-2 border-emerald-500/80 rounded-2xl p-6 shadow-xl animate-glow max-w-sm mx-auto space-y-1">
                     <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest block">Clave de Acceso Única</span>
                     <span id="resultCodeDisplay" class="text-6xl font-black tracking-widest font-mono text-emerald-400 block">---</span>
                 </div>
 
-                <!-- Ticket Canvas Hidden container for PNG export -->
                 <div class="hidden">
                     <canvas id="ticketCanvas" width="600" height="750"></canvas>
                 </div>
 
-                <!-- Summary Details -->
                 <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 text-left text-xs space-y-2">
                     <div class="flex justify-between border-b border-slate-800 pb-2">
                         <span class="text-slate-400">Conductor:</span>
@@ -226,7 +224,6 @@
                     </div>
                 </div>
 
-                <!-- Action Buttons -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                     <button onclick="shareWhatsApp()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl text-xs transition flex items-center justify-center gap-2 shadow">
                         <i class="fa-brands fa-whatsapp text-lg"></i>
@@ -247,6 +244,7 @@
             </div>
         </section>
 
+        <!-- Checker View -->
         <section id="viewChecker" class="hidden space-y-6">
             <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-2xl mx-auto shadow-xl space-y-6">
                 <div class="border-b border-slate-800 pb-4">
@@ -257,7 +255,6 @@
                     <p class="text-xs text-slate-400 mt-1">Digite la clave de 3 dígitos, escanee con la cámara o ingrese la patente del vehículo.</p>
                 </div>
 
-                <!-- Search / Scanner Input -->
                 <div class="space-y-4">
                     <div class="flex gap-2">
                         <input type="text" id="checkerCodeInput" placeholder="Ej: 6VZ o Patente" uppercase autocapitalize="characters" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 font-mono text-center text-xl font-bold uppercase tracking-widest text-emerald-400 focus:outline-none focus:border-emerald-500">
@@ -266,7 +263,6 @@
                         </button>
                     </div>
 
-                    <!-- Camera Scanner Container -->
                     <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 text-center space-y-3">
                         <div id="qrReader" class="overflow-hidden rounded-xl bg-slate-900"></div>
                         <div id="cameraPlaceholder" class="py-6 text-slate-500 text-xs">
@@ -280,7 +276,6 @@
                     </div>
                 </div>
 
-                <!-- Search Result Card -->
                 <div id="checkerResultBox" class="hidden bg-slate-950 border-2 border-emerald-500/80 rounded-2xl p-6 space-y-5 shadow-2xl">
                     <div class="flex items-center justify-between border-b border-slate-800 pb-3">
                         <div>
@@ -321,7 +316,6 @@
                     </button>
                 </div>
 
-                <!-- Not Found Box -->
                 <div id="checkerNotFound" class="hidden bg-rose-950/40 border border-rose-500/40 rounded-2xl p-6 text-center text-rose-300 text-xs space-y-2">
                     <i class="fa-solid fa-triangle-exclamation text-3xl text-rose-400"></i>
                     <p class="font-bold text-sm">No se encontró ningún vehículo registrado con esa clave o patente.</p>
@@ -329,8 +323,8 @@
             </div>
         </section>
 
+        <!-- Dashboard View -->
         <section id="viewDashboard" class="hidden space-y-6">
-            <!-- Stats Bar -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex items-center justify-between">
                     <div>
@@ -363,7 +357,6 @@
                 </div>
             </div>
 
-            <!-- Vehicles Table Container -->
             <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
                 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
                     <h2 class="text-lg font-bold text-white flex items-center gap-2">
@@ -387,16 +380,15 @@
                             </tr>
                         </thead>
                         <tbody id="vehiclesTableBody" class="divide-y divide-slate-800/60 font-medium">
-                            <!-- Populated dynamically -->
                         </tbody>
                     </table>
                 </div>
             </div>
         </section>
 
+        <!-- Admin View -->
         <section id="viewAdmin" class="hidden space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- User Creation Form -->
                 <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
                     <div class="border-b border-slate-800 pb-3">
                         <h2 class="text-lg font-bold text-white flex items-center gap-2">
@@ -442,14 +434,11 @@
                             </button>
                         </div>
                         <div id="usersListContainer" class="space-y-2 max-h-48 overflow-y-auto pr-1">
-                            <!-- Populated dynamically -->
                         </div>
                     </div>
                 </div>
 
-                <!-- PIN & Database Maintenance -->
                 <div class="space-y-6">
-                    <!-- PIN Change Card -->
                     <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
                         <div class="border-b border-slate-800 pb-3">
                             <h2 class="text-lg font-bold text-white flex items-center gap-2">
@@ -467,7 +456,6 @@
                         </form>
                     </div>
 
-                    <!-- Reset DB Card -->
                     <div class="bg-rose-950/20 border border-rose-500/30 rounded-3xl p-6 space-y-3 shadow-xl">
                         <div class="flex items-center gap-2 text-rose-400 font-bold text-base">
                             <i class="fa-solid fa-triangle-exclamation text-lg"></i>
@@ -485,7 +473,6 @@
 
     </main>
 
-    <!-- Live Access Granted Alert -->
     <div id="liveAlertModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
         <div class="bg-slate-900 border-2 border-emerald-500 rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center space-y-4 shadow-2xl animate-glow">
             <div class="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto text-3xl">
@@ -502,7 +489,6 @@
         </div>
     </div>
 
-    <!-- Deletion PIN Confirmation Modal -->
     <div id="deleteVehicleModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
             <div class="text-center space-y-1">
@@ -521,10 +507,10 @@
         </div>
     </div>
 
-    <!-- Toast Notification Container -->
     <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4 sm:px-0"></div>
 
     <script type="module">
+        /* Standard JavaScript variables and application state */
         let activeStaffUser = null;
         let systemUsers = [];
         let systemDeletePin = '1234';
@@ -769,6 +755,23 @@
 
                 const storedDeletedUserIds = localStorage.getItem('park_app_deleted_user_ids');
                 if (storedDeletedUserIds) deletedUserIds = JSON.parse(storedDeletedUserIds);
+
+                const savedSession = localStorage.getItem('park_app_active_user');
+                if (savedSession) {
+                    const sessionUser = JSON.parse(savedSession);
+                    if (sessionUser && sessionUser.username) {
+                        activeStaffUser = sessionUser;
+                        setTimeout(() => {
+                            document.getElementById('userProfileName').innerText = sessionUser.nombre;
+                            document.getElementById('userProfileRole').innerText = sessionUser.role;
+                            document.getElementById('viewLogin').classList.add('hidden');
+                            document.getElementById('userProfileBar').classList.remove('hidden');
+                            document.getElementById('mainNav').classList.remove('hidden');
+
+                            applyRolePermissions(sessionUser.role);
+                        }, 50);
+                    }
+                }
             } catch (e) {}
         }
 
@@ -799,11 +802,30 @@
             const label = document.getElementById('syncStatusText');
             if (dot && label) {
                 label.innerText = text;
-                if (color === 'emerald') {
-                    dot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
-                } else {
-                    dot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
-                }
+                dot.className = color === 'emerald' ? 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse' : 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+            }
+        }
+
+        function applyRolePermissions(role) {
+            const tabReg = document.getElementById('tabRegisterBtn');
+            const tabChk = document.getElementById('tabCheckerBtn');
+            const tabAdm = document.getElementById('tabAdminBtn');
+
+            if (role === 'registrador') {
+                if (tabReg) tabReg.classList.remove('hidden');
+                if (tabChk) tabChk.classList.add('hidden');
+                if (tabAdm) tabAdm.classList.add('hidden');
+                switchTab('register');
+            } else if (role === 'controlador') {
+                if (tabReg) tabReg.classList.add('hidden');
+                if (tabChk) tabChk.classList.remove('hidden');
+                if (tabAdm) tabAdm.classList.add('hidden');
+                switchTab('checker');
+            } else {
+                if (tabReg) tabReg.classList.remove('hidden');
+                if (tabChk) tabChk.classList.remove('hidden');
+                if (tabAdm) tabAdm.classList.remove('hidden');
+                switchTab('register');
             }
         }
 
@@ -812,9 +834,14 @@
             const uInput = document.getElementById('loginUsername').value.trim().toLowerCase();
             const pInput = document.getElementById('loginPassword').value.trim();
 
+            if (!uInput || !pInput) {
+                showToast("Ingrese usuario y contraseña", "error");
+                return;
+            }
+
             await syncCloudStorage(true);
 
-            let match = systemUsers.find(u => u.username.toLowerCase() === uInput && u.password === pInput);
+            let match = systemUsers.find(u => u && u.username && u.username.toLowerCase() === uInput && u.password === pInput);
             if (!match && uInput === 'admin' && pInput === 'admin123') {
                 match = {
                     id: 'admin-default',
@@ -827,33 +854,15 @@
 
             if (match) {
                 activeStaffUser = match;
+                try { localStorage.setItem('park_app_active_user', JSON.stringify(match)); } catch(e) {}
+
                 document.getElementById('userProfileName').innerText = match.nombre;
                 document.getElementById('userProfileRole').innerText = match.role;
                 document.getElementById('viewLogin').classList.add('hidden');
                 document.getElementById('userProfileBar').classList.remove('hidden');
                 document.getElementById('mainNav').classList.remove('hidden');
 
-                const tabReg = document.getElementById('tabRegisterBtn');
-                const tabChk = document.getElementById('tabCheckerBtn');
-                const tabAdm = document.getElementById('tabAdminBtn');
-
-                if (match.role === 'registrador') {
-                    tabReg.classList.remove('hidden');
-                    tabChk.classList.add('hidden');
-                    tabAdm.classList.add('hidden');
-                    switchTab('register');
-                } else if (match.role === 'controlador') {
-                    tabReg.classList.add('hidden');
-                    tabChk.classList.remove('hidden');
-                    tabAdm.classList.add('hidden');
-                    switchTab('checker');
-                } else {
-                    tabReg.classList.remove('hidden');
-                    tabChk.classList.remove('hidden');
-                    tabAdm.classList.remove('hidden');
-                    switchTab('register');
-                }
-
+                applyRolePermissions(match.role);
                 showToast(`Bienvenido/a, ${match.nombre}`, "success");
             } else {
                 showToast("Usuario o contraseña incorrectos", "error");
@@ -862,6 +871,7 @@
 
         window.logoutUser = function() {
             activeStaffUser = null;
+            try { localStorage.removeItem('park_app_active_user'); } catch(e) {}
             document.getElementById('viewLogin').classList.remove('hidden');
             document.getElementById('userProfileBar').classList.add('hidden');
             document.getElementById('mainNav').classList.add('hidden');
@@ -871,6 +881,17 @@
         };
 
         window.switchTab = function(tabName) {
+            if (activeStaffUser) {
+                if (activeStaffUser.role === 'registrador' && (tabName === 'checker' || tabName === 'admin')) {
+                    showToast("Acceso restringido para el rol Registrador", "error");
+                    return;
+                }
+                if (activeStaffUser.role === 'controlador' && (tabName === 'register' || tabName === 'admin')) {
+                    showToast("Acceso restringido para el rol Controlador", "error");
+                    return;
+                }
+            }
+
             currentTab = tabName;
             const views = ['Register', 'Checker', 'Dashboard', 'Admin', 'PassResult'];
             views.forEach(v => {
@@ -893,6 +914,7 @@
 
             if (tabName === 'register') {
                 resetRegistrationForm();
+                document.getElementById('viewRegister').classList.remove('hidden');
                 if (btns.register) btns.register.className = "px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all bg-emerald-500 text-slate-950 font-bold shadow";
             } else if (tabName === 'checker') {
                 document.getElementById('viewChecker').classList.remove('hidden');
@@ -956,24 +978,90 @@
             }
 
             container.innerHTML = systemUsers.map(u => `
-                <div class="flex items-center justify-between bg-slate-950 border border-slate-800 p-2.5 rounded-xl text-xs">
-                    <div>
-                        <span class="font-bold text-white block">${u.nombre}</span>
-                        <span class="text-[10px] text-slate-400">@${u.username} &bull; <strong class="text-emerald-400 uppercase">${u.role}</strong></span>
+                <div class="flex items-center justify-between bg-slate-950 border border-slate-800 p-2.5 rounded-xl text-xs gap-2">
+                    <div class="flex-grow min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-white truncate">${u.nombre}</span>
+                            <span class="text-[9px] px-1.5 py-0.5 rounded font-extrabold uppercase ${u.role === 'admin' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : (u.role === 'registrador' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30')}">${u.role}</span>
+                        </div>
+                        <div class="text-[10px] text-slate-400 mt-0.5 flex flex-wrap items-center gap-x-2">
+                            <span>Usuario: <strong class="text-slate-200">@${u.username}</strong></span>
+                            <span>• Clave: <strong class="text-emerald-400 font-mono" id="pwd_val_${u.id}">••••••</strong></span>
+                            <button type="button" onclick="toggleUserPasswordVisibility('${u.id}', '${u.password}')" class="text-[10px] text-slate-400 hover:text-white underline ml-1">
+                                <i class="fa-solid fa-eye text-[10px]"></i> Ver
+                            </button>
+                        </div>
                     </div>
                     ${u.username !== 'admin' ? `
-                        <button onclick="deleteStaffUser('${u.id}')" class="text-rose-400 hover:text-rose-300 p-1">
+                        <button onclick="deleteStaffUser('${u.id}')" title="Eliminar usuario" class="text-rose-400 hover:text-rose-300 p-1.5 rounded bg-rose-500/10 hover:bg-rose-500/20 transition">
                             <i class="fa-solid fa-user-minus"></i>
                         </button>
-                    ` : '<span class="text-[10px] text-slate-500 font-bold">Principal</span>'}
+                    ` : '<span class="text-[10px] text-slate-500 font-bold px-2">Principal</span>'}
                 </div>
             `).join('');
         }
 
+        window.toggleUserPasswordVisibility = function(userId, pwd) {
+            const el = document.getElementById('pwd_val_' + userId);
+            if (!el) return;
+            el.innerText = el.innerText === '••••••' ? pwd : '••••••';
+        };
+
+        window.handleUpdatePinSubmit = function(e) {
+            e.preventDefault();
+            const val = document.getElementById('adminPinInput').value.trim().toUpperCase();
+            if (val.length === 4) {
+                systemDeletePin = val;
+                saveLocalPin();
+                showToast("Clave de borrado de 4 dígitos actualizada", "success");
+            } else {
+                showToast("La clave debe contener exactamente 4 caracteres", "error");
+            }
+        };
+
+        window.promptResetAllVehicles = function() {
+            if (confirm("¿Está seguro de borrar permanentemente TODOS los vehículos registrados para iniciar un evento limpio desde cero?")) {
+                vehiclesData = [];
+                lastClearedAt = Date.now();
+                localStorage.setItem('park_app_cleared_at', lastClearedAt.toString());
+                localStorage.setItem('park_app_vehicles', JSON.stringify([]));
+                renderDashboard();
+                lastMutationTime = Date.now();
+                pushCloudStorage();
+                showToast("Se han eliminado todos los vehículos registrados", "info");
+            }
+        };
+
+        function generateUnique3Code() {
+            const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+            let code = '';
+            let isUnique = false;
+            let attempts = 0;
+
+            while (!isUnique && attempts < 1000) {
+                code = '';
+                for (let i = 0; i < 3; i++) {
+                    code += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                isUnique = !vehiclesData.some(v => v.codigo === code);
+                attempts++;
+            }
+            return code;
+        }
+
+        window.toggleDiscDetalle = function(show) {
+            const box = document.getElementById('discDetalleBox');
+            if (box) {
+                if (show) box.classList.remove('hidden');
+                else box.classList.add('hidden');
+            }
+        };
+
         window.handleRegisterSubmit = function(e) {
             e.preventDefault();
+
             if (vehiclesData.length >= 2000) {
-                showToast("Límite máximo de 2.000 vehículos alcanzado.", "error");
+                showToast("Capacidad máxima alcanzada (2000 vehículos)", "error");
                 return;
             }
 
@@ -981,64 +1069,297 @@
             const apellido = document.getElementById('regApellido').value.trim();
             const patente = document.getElementById('regPatente').value.trim().toUpperCase();
             const celular = document.getElementById('regCelular').value.trim();
-            const discRadios = document.getElementsByName('regDisc');
-            let esDisc = false;
-            for (const r of discRadios) { if (r.checked && r.value === 'si') esDisc = true; }
-            const discDetalle = esDisc ? (document.getElementById('regDiscDetalle').value.trim() || 'Sí') : 'No';
             const congregacion = document.getElementById('regCongregacion').value.trim();
+            const tieneDisc = document.querySelector('input[name="regDisc"]:checked').value === 'si';
+            const discDetalle = tieneDisc ? (document.getElementById('regDiscDetalle').value.trim() || 'Movilidad reducida') : 'No';
 
-            const exists = vehiclesData.find(v => v.patente === patente);
-            if (exists) {
-                showToast(`La patente ${patente} ya existe con la clave ${exists.clave3}`, "error");
-                return;
-            }
+            const codigo = generateUnique3Code();
 
-            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-            let clave3 = '';
-            let isUnique = false;
-            let attempts = 0;
-            while (!isUnique && attempts < 1000) {
-                clave3 = '';
-                for (let i = 0; i < 3; i++) { clave3 += chars.charAt(Math.floor(Math.random() * chars.length)); }
-                if (!vehiclesData.some(v => v.clave3 === clave3)) isUnique = true;
-                attempts++;
-            }
-
-            const vehicleObj = {
-                id: 'veh_' + Date.now(),
+            const newVehicle = {
+                id: 'veh_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                codigo,
+                nombre,
+                apellido,
                 conductor: `${nombre} ${apellido}`,
-                nombre, apellido, patente, celular,
-                esDiscapacitadoOMayor: esDisc, discDetalle, congregacion,
-                clave3, estado: 'pendiente', fechaRegistro: new Date().toISOString()
+                patente,
+                celular,
+                congregacion,
+                tieneDisc,
+                discDetalle,
+                estado: 'pendiente',
+                fechaRegistro: new Date().toISOString()
             };
 
-            vehiclesData.unshift(vehicleObj);
+            vehiclesData.unshift(newVehicle);
             saveLocalVehicles();
 
-            activeSelectedVehicle = vehicleObj;
-            renderPassResultView(vehicleObj);
-            showToast("Vehículo registrado exitosamente", "success");
+            activeSelectedVehicle = newVehicle;
+            displayPassResult(newVehicle);
+            generateTicketCanvas(newVehicle);
 
+            document.getElementById('vehicleForm').reset();
+            toggleDiscDetalle(false);
+
+            showToast("Vehículo registrado correctamente", "success");
+        };
+
+        function displayPassResult(v) {
+            document.getElementById('resultCodeDisplay').innerText = v.codigo;
+            document.getElementById('resNombreCompleto').innerText = v.conductor;
+            document.getElementById('resPatente').innerText = v.patente;
+            document.getElementById('resCelular').innerText = v.celular;
+            document.getElementById('resCongregacion').innerText = v.congregacion;
+            document.getElementById('resDisc').innerText = v.tieneDisc ? `Sí (${v.discDetalle})` : 'No';
+
+            document.getElementById('viewRegister').classList.add('hidden');
+            document.getElementById('viewPassResult').classList.remove('hidden');
+        }
+
+        window.resetRegistrationForm = function() {
             const form = document.getElementById('vehicleForm');
             if (form) form.reset();
             toggleDiscDetalle(false);
+            
+            document.getElementById('viewPassResult').classList.add('hidden');
+            document.getElementById('viewRegister').classList.remove('hidden');
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setTimeout(() => {
+                const nameInput = document.getElementById('regNombre');
+                if (nameInput) nameInput.focus();
+            }, 100);
         };
 
-        window.handleUpdatePinSubmit = function(e) {
-            e.preventDefault();
-            if (!activeStaffUser || activeStaffUser.role !== 'admin') return;
-            const newPin = document.getElementById('adminPinInput').value.trim();
-            if (newPin.length !== 4) {
-                showToast("La clave debe tener 4 dígitos", "error");
+        function generateTicketCanvas(v) {
+            const canvas = document.getElementById('ticketCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#090d16';
+            ctx.fillRect(0, 0, 600, 750);
+
+            ctx.fillStyle = '#1e293b';
+            ctx.beginPath();
+            ctx.roundRect(30, 30, 540, 690, 24);
+            ctx.fill();
+
+            ctx.fillStyle = '#10b981';
+            ctx.beginPath();
+            ctx.roundRect(50, 50, 500, 80, 16);
+            ctx.fill();
+
+            ctx.fillStyle = '#022c22';
+            ctx.font = '900 24px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('ESTACIONAMIENTO RESERVADO', 300, 98);
+
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.roundRect(100, 160, 400, 140, 20);
+            ctx.fill();
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '600 14px Inter, sans-serif';
+            ctx.fillText('CLAVE ÚNICA DE ACCESO', 300, 195);
+
+            ctx.fillStyle = '#34d399';
+            ctx.font = '900 72px monospace';
+            ctx.fillText(v.codigo, 300, 268);
+
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#f8fafc';
+
+            const drawField = (label, val, y) => {
+                ctx.fillStyle = '#64748b';
+                ctx.font = '600 13px Inter, sans-serif';
+                ctx.fillText(label.toUpperCase(), 70, y);
+
+                ctx.fillStyle = '#f8fafc';
+                ctx.font = '700 18px Inter, sans-serif';
+                ctx.fillText(val, 70, y + 24);
+
+                ctx.strokeStyle = '#334155';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(70, y + 36);
+                ctx.lineTo(530, y + 36);
+                ctx.stroke();
+            };
+
+            drawField('Conductor', v.conductor, 340);
+            drawField('Matrícula / Patente', v.patente, 420);
+            drawField('Congregación', v.congregacion, 500);
+            drawField('Prioridad / Discapacidad', v.tieneDisc ? `Sí - ${v.discDetalle}` : 'No', 580);
+
+            ctx.fillStyle = '#64748b';
+            ctx.font = '500 12px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Presente este pase al ingresar al estacionamiento.', 300, 680);
+        }
+
+        window.downloadPassImage = function() {
+            const canvas = document.getElementById('ticketCanvas');
+            if (!canvas) return;
+            const link = document.createElement('a');
+            link.download = `Pase_Estacionamiento_${activeSelectedVehicle ? activeSelectedVehicle.codigo : 'Acceso'}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        };
+
+        window.shareWhatsApp = function() {
+            if (!activeSelectedVehicle) return;
+            const v = activeSelectedVehicle;
+            const text = `*ESTACIONAMIENTO RESERVADO*\n\nHola *${v.conductor}*, aquí está tu pase de acceso:\n\n🔑 *CLAVE DE ACCESO:* *${v.codigo}*\n🚘 *Patente:* ${v.patente}\n👥 *Congregación:* ${v.congregacion}\n♿ *Prioridad:* ${v.tieneDisc ? 'Sí' : 'No'}\n\nMuestra este mensaje o la clave de 3 dígitos al ingresar.`;
+            
+            let phone = v.celular.replace(/\D/g, '');
+            if (!phone.startsWith('54')) phone = '54' + phone;
+            
+            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
+        };
+
+        window.searchVehicleCode = function() {
+            const query = document.getElementById('checkerCodeInput').value.trim().toUpperCase();
+            const resBox = document.getElementById('checkerResultBox');
+            const notFound = document.getElementById('checkerNotFound');
+
+            if (!query) return;
+
+            const match = vehiclesData.find(v => v.codigo.toUpperCase() === query || v.patente.toUpperCase() === query);
+
+            if (match) {
+                activeSelectedVehicle = match;
+                notFound.classList.add('hidden');
+                resBox.classList.remove('hidden');
+
+                document.getElementById('checkResultCode').innerText = match.codigo;
+                document.getElementById('checkNombreConductor').innerText = match.conductor;
+                document.getElementById('checkPatente').innerText = match.patente;
+                document.getElementById('checkCongregacion').innerText = match.congregacion;
+                document.getElementById('checkCelular').innerText = match.celular;
+                document.getElementById('checkDiscDetalle').innerText = match.tieneDisc ? match.discDetalle : 'Sin prioridad requerida';
+
+                const badge = document.getElementById('vehicleStatusBadge');
+                const btn = document.getElementById('authorizeAccessBtn');
+
+                if (match.estado === 'autorizado') {
+                    badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+                    badge.innerText = "Ingresado";
+                    btn.className = "w-full bg-slate-800 text-slate-400 font-bold py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider cursor-not-allowed";
+                    btn.disabled = true;
+                } else {
+                    badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30";
+                    badge.innerText = "Pendiente";
+                    btn.className = "w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider transition shadow-lg flex items-center justify-center gap-2";
+                    btn.disabled = false;
+                }
+            } else {
+                resBox.classList.add('hidden');
+                notFound.classList.remove('hidden');
+            }
+        };
+
+        window.authorizeVehicleAccess = function() {
+            if (!activeSelectedVehicle) return;
+
+            activeSelectedVehicle.estado = 'autorizado';
+            activeSelectedVehicle.fechaAcceso = new Date().toISOString();
+
+            saveLocalVehicles();
+
+            const accessObj = {
+                id: 'acc_' + Date.now(),
+                patente: activeSelectedVehicle.patente,
+                conductor: activeSelectedVehicle.conductor
+            };
+            lastKnownAccessId = accessObj.id;
+            pushCloudStorage(accessObj);
+
+            showToast(`¡Acceso Autorizado para ${activeSelectedVehicle.patente}!`, "success");
+            triggerLiveAccessAlert(activeSelectedVehicle.patente, activeSelectedVehicle.conductor);
+
+            searchVehicleCode();
+        };
+
+        window.toggleCameraScanner = function() {
+            const placeholder = document.getElementById('cameraPlaceholder');
+            const btnText = document.getElementById('camBtnText');
+
+            if (html5QrScanner) {
+                html5QrScanner.clear();
+                html5QrScanner = null;
+                placeholder.classList.remove('hidden');
+                btnText.innerText = "Activar Cámara";
                 return;
             }
 
-            systemDeletePin = newPin;
-            saveLocalPin();
-            showToast("Clave de borrado actualizada a 4 dígitos", "success");
+            placeholder.classList.add('hidden');
+            btnText.innerText = "Detener Cámara";
+
+            html5QrScanner = new Html5QrcodeScanner("qrReader", { fps: 10, qrbox: 250 });
+            html5QrScanner.render((scannedText) => {
+                document.getElementById('checkerCodeInput').value = scannedText;
+                searchVehicleCode();
+                html5QrScanner.clear();
+                html5QrScanner = null;
+                placeholder.classList.remove('hidden');
+                btnText.innerText = "Activar Cámara";
+            }, () => {});
         };
 
-        window.openDeleteVehicleModal = function(vId) {
+        function renderDashboard() {
+            const tbody = document.getElementById('vehiclesTableBody');
+            if (!tbody) return;
+
+            const total = vehiclesData.length;
+            const autorizados = vehiclesData.filter(v => v.estado === 'autorizado').length;
+            const pendientes = total - autorizados;
+
+            document.getElementById('statTotal').innerText = total;
+            document.getElementById('statAutorizados').innerText = autorizados;
+            document.getElementById('statPendientes').innerText = pendientes;
+
+            if (vehiclesData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-slate-500">No hay vehículos registrados.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = vehiclesData.map(v => `
+                <tr class="hover:bg-slate-900/50 transition">
+                    <td class="px-4 py-3 font-mono font-bold text-emerald-400 text-sm">${v.codigo}</td>
+                    <td class="px-4 py-3 font-mono font-bold uppercase text-white">${v.patente}</td>
+                    <td class="px-4 py-3 text-slate-200">${v.conductor}</td>
+                    <td class="px-4 py-3 text-slate-400">${v.congregacion}</td>
+                    <td class="px-4 py-3">
+                        ${v.tieneDisc ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">${v.discDetalle}</span>` : '<span class="text-slate-500">No</span>'}
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${v.estado === 'autorizado' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'}">
+                            ${v.estado === 'autorizado' ? 'Ingresado' : 'Pendiente'}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        <button onclick="promptDeleteVehicle('${v.id}')" title="Eliminar vehículo" class="p-1.5 rounded bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        window.filterDashboardTable = function() {
+            const query = document.getElementById('dashSearchInput').value.trim().toLowerCase();
+            const rows = document.querySelectorAll('#vehiclesTableBody tr');
+
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(query) ? '' : 'none';
+            });
+        };
+
+        window.promptDeleteVehicle = function(vId) {
             vehicleToDeleteId = vId;
             document.getElementById('deletePinInput').value = '';
             document.getElementById('deleteVehicleModal').classList.remove('hidden');
@@ -1050,410 +1371,72 @@
         };
 
         window.confirmDeleteVehicle = function() {
-            const pin = document.getElementById('deletePinInput').value.trim();
-            if (pin !== systemDeletePin) {
-                showToast("Clave de 4 dígitos incorrecta", "error");
-                return;
-            }
-
-            if (vehicleToDeleteId) {
+            const inputPin = document.getElementById('deletePinInput').value.trim().toUpperCase();
+            if (inputPin === systemDeletePin.toUpperCase()) {
                 if (!deletedVehicleIds.includes(vehicleToDeleteId)) {
                     deletedVehicleIds.push(vehicleToDeleteId);
                     localStorage.setItem('park_app_deleted_ids', JSON.stringify(deletedVehicleIds));
                 }
                 vehiclesData = vehiclesData.filter(v => v.id !== vehicleToDeleteId);
                 saveLocalVehicles();
-                showToast("Registro eliminado correctamente", "info");
                 closeDeleteModal();
-            }
-        };
-
-        window.promptResetAllVehicles = function() {
-            if (!activeStaffUser || activeStaffUser.role !== 'admin') return;
-            if (confirm("¿Está seguro de que desea borrar TODOS los vehículos registrados? Esta acción no se puede deshacer.")) {
-                vehiclesData = [];
-                lastClearedAt = Date.now();
-                localStorage.setItem('park_app_cleared_at', lastClearedAt.toString());
-                saveLocalVehicles();
-                showToast("Base de datos de vehículos vaciada por completo", "success");
-            }
-        };
-
-        function renderDashboard() {
-            const total = vehiclesData.length;
-            const autorizados = vehiclesData.filter(v => v.estado === 'autorizado').length;
-            const pendientes = total - autorizados;
-
-            const elTotal = document.getElementById('statTotal');
-            const elAut = document.getElementById('statAutorizados');
-            const elPend = document.getElementById('statPendientes');
-
-            if (elTotal) elTotal.innerText = total;
-            if (elAut) elAut.innerText = autorizados;
-            if (elPend) elPend.innerText = pendientes;
-
-            filterDashboardTable();
-        }
-
-        window.filterDashboardTable = function() {
-            const searchInput = document.getElementById('dashSearchInput');
-            const search = searchInput ? (searchInput.value || '').toLowerCase().trim() : '';
-            const tbody = document.getElementById('vehiclesTableBody');
-
-            if (!tbody) return;
-
-            const filtered = vehiclesData.filter(v => 
-                (v.clave3 && v.clave3.toLowerCase().includes(search)) ||
-                (v.patente && v.patente.toLowerCase().includes(search)) ||
-                (v.conductor && v.conductor.toLowerCase().includes(search)) ||
-                (v.congregacion && v.congregacion.toLowerCase().includes(search))
-            );
-
-            if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-slate-500">No hay vehículos registrados para mostrar.</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = filtered.map(v => `
-                <tr class="hover:bg-slate-800/40 transition">
-                    <td class="px-4 py-3 font-mono font-bold text-emerald-400">${v.clave3}</td>
-                    <td class="px-4 py-3 font-mono font-semibold uppercase">${v.patente}</td>
-                    <td class="px-4 py-3 text-white font-medium">${v.conductor}</td>
-                    <td class="px-4 py-3 text-slate-400">${v.congregacion}</td>
-                    <td class="px-4 py-3">
-                        ${v.esDiscapacitadoOMayor 
-                            ? `<span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-semibold">${v.discDetalle || 'Sí'}</span>`
-                            : `<span class="text-slate-500">Sin prioridad</span>`}
-                    </td>
-                    <td class="px-4 py-3">
-                        ${v.estado === 'autorizado'
-                            ? `<span class="inline-flex items-center gap-1 text-emerald-400 font-bold"><i class="fa-solid fa-circle-check"></i> Ingresó</span>`
-                            : `<span class="inline-flex items-center gap-1 text-amber-400 font-medium"><i class="fa-solid fa-clock"></i> Pendiente</span>`}
-                    </td>
-                    <td class="px-4 py-3 text-right">
-                        <button onclick="openDeleteVehicleModal('${v.id}')" title="Eliminar registro" class="text-rose-400 hover:text-rose-300 p-1.5 rounded bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition text-xs">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-        };
-
-        function renderPassResultView(v) {
-            document.getElementById('resultCodeDisplay').innerText = v.clave3;
-            document.getElementById('resNombreCompleto').innerText = v.conductor;
-            document.getElementById('resPatente').innerText = v.patente;
-            document.getElementById('resCelular').innerText = v.celular;
-            document.getElementById('resDisc').innerText = v.discDetalle;
-            document.getElementById('resCongregacion').innerText = v.congregacion;
-
-            generateTicketCanvasImage(v);
-
-            document.getElementById('viewRegister').classList.add('hidden');
-            document.getElementById('viewPassResult').classList.remove('hidden');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function generateTicketCanvasImage(v) {
-            const canvas = document.getElementById('ticketCanvas');
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-
-            ctx.fillStyle = '#0f172a';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            ctx.fillStyle = '#1e293b';
-            ctx.beginPath();
-            ctx.roundRect(30, 30, 540, 690, 24);
-            ctx.fill();
-
-            ctx.strokeStyle = '#10b981';
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.roundRect(30, 30, 540, 690, 24);
-            ctx.stroke();
-
-            ctx.fillStyle = '#10b981';
-            ctx.font = 'bold 24px Inter, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('ESTACIONAMIENTO RESERVADO', 300, 90);
-
-            ctx.fillStyle = '#94a3b8';
-            ctx.font = '14px Inter, sans-serif';
-            ctx.fillText('PASE DE INGRESO VEHICULAR', 300, 115);
-
-            ctx.fillStyle = '#020617';
-            ctx.beginPath();
-            ctx.roundRect(80, 140, 440, 180, 20);
-            ctx.fill();
-            ctx.strokeStyle = '#059669';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            ctx.fillStyle = '#64748b';
-            ctx.font = 'bold 14px Inter, sans-serif';
-            ctx.fillText('CLAVE DE ACCESO', 300, 175);
-
-            ctx.fillStyle = '#34d399';
-            ctx.font = 'black 90px monospace';
-            ctx.fillText(v.clave3, 300, 265);
-
-            ctx.textAlign = 'left';
-            let y = 370;
-            const drawRow = (label, val, highlight = false) => {
-                ctx.fillStyle = '#94a3b8';
-                ctx.font = 'bold 14px Inter, sans-serif';
-                ctx.fillText(label, 70, y);
-
-                ctx.fillStyle = highlight ? '#34d399' : '#ffffff';
-                ctx.font = highlight ? 'bold 20px monospace' : '16px Inter, sans-serif';
-                ctx.fillText(val, 70, y + 24);
-                y += 65;
-            };
-
-            drawRow('CONDUCTOR:', v.conductor);
-            drawRow('MATRÍCULA / PATENTE:', v.patente, true);
-            drawRow('CONGREGACIÓN:', v.congregacion);
-            drawRow('MAYOR / DISCAPACIDAD:', v.discDetalle);
-
-            ctx.textAlign = 'center';
-            ctx.fillStyle = '#64748b';
-            ctx.font = 'italic 13px Inter, sans-serif';
-            ctx.fillText('Muestre este pase o dicte la clave al ingresar al predio.', 300, 680);
-        }
-
-        window.downloadPassImage = function() {
-            const canvas = document.getElementById('ticketCanvas');
-            const link = document.createElement('a');
-            link.download = `Pase_Estacionamiento_${activeSelectedVehicle ? activeSelectedVehicle.clave3 : 'Codigo'}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-            showToast("Imagen descargada con éxito", "info");
-        };
-
-        window.shareWhatsApp = function() {
-            if (!activeSelectedVehicle) return;
-            const v = activeSelectedVehicle;
-            
-            const text = `🚗 *PASE DE ESTACIONAMIENTO RESERVADO*\n` +
-                         `-----------------------------------\n` +
-                         `🔑 *CLAVE DE ACCESO:* *${v.clave3}*\n` +
-                         `-----------------------------------\n` +
-                         `👤 *Conductor:* ${v.conductor}\n` +
-                         `🚘 *Matrícula:* ${v.patente}\n` +
-                         `🏛 *Congregación:* ${v.congregacion}\n` +
-                         `♿ *Prioridad:* ${v.discDetalle}\n\n` +
-                         `_Por favor presenta esta clave de 3 dígitos al llegar al estacionamiento._`;
-
-            const encodedText = encodeURIComponent(text);
-            const cleanPhone = v.celular.replace(/[^0-9]/g, '');
-            const waUrl = cleanPhone.length >= 8 
-                ? `https://wa.me/${cleanPhone}?text=${encodedText}`
-                : `https://api.whatsapp.com/send?text=${encodedText}`;
-
-            window.open(waUrl, '_blank');
-        };
-
-        window.resetRegistrationForm = function() {
-            const form = document.getElementById('vehicleForm');
-            if (form) form.reset();
-            
-            const discBox = document.getElementById('discDetalleBox');
-            if (discBox) discBox.classList.add('hidden');
-            
-            const discInput = document.getElementById('regDiscDetalle');
-            if (discInput) discInput.value = '';
-
-            const viewPass = document.getElementById('viewPassResult');
-            if (viewPass) viewPass.classList.add('hidden');
-            
-            const viewReg = document.getElementById('viewRegister');
-            if (viewReg) viewReg.classList.remove('hidden');
-
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            
-            setTimeout(() => {
-                const nombreInput = document.getElementById('regNombre');
-                if (nombreInput) nombreInput.focus();
-            }, 100);
-        };
-
-        window.toggleDiscDetalle = function(show) {
-            const box = document.getElementById('discDetalleBox');
-            if (box) {
-                if (show) box.classList.remove('hidden');
-                else box.classList.add('hidden');
-            }
-        };
-
-        window.searchVehicleCode = function() {
-            const queryVal = document.getElementById('checkerCodeInput').value.trim().toUpperCase();
-            if (!queryVal) return;
-
-            const match = vehiclesData.find(v => 
-                v.clave3.toUpperCase() === queryVal || 
-                v.patente.toUpperCase().replace(/[^A-Z0-9]/g, '') === queryVal.replace(/[^A-Z0-9]/g, '')
-            );
-
-            const resultBox = document.getElementById('checkerResultBox');
-            const notFoundBox = document.getElementById('checkerNotFound');
-
-            if (match) {
-                activeSelectedVehicle = match;
-                notFoundBox.classList.add('hidden');
-                
-                document.getElementById('checkResultCode').innerText = match.clave3;
-                document.getElementById('checkNombreConductor').innerText = match.conductor;
-                document.getElementById('checkPatente').innerText = match.patente;
-                document.getElementById('checkCongregacion').innerText = match.congregacion;
-                document.getElementById('checkCelular').innerText = match.celular;
-                document.getElementById('checkDiscDetalle').innerText = match.discDetalle;
-
-                const badge = document.getElementById('vehicleStatusBadge');
-                const authBtn = document.getElementById('authorizeAccessBtn');
-
-                if (match.estado === 'autorizado') {
-                    badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
-                    badge.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i> Ya Ingresó / Autorizado`;
-                    authBtn.classList.add('opacity-50', 'pointer-events-none');
-                    authBtn.querySelector('span').innerText = "VEHÍCULO YA AUTORIZADO PREVIAMENTE";
-                } else {
-                    badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30";
-                    badge.innerHTML = `<i class="fa-solid fa-clock mr-1"></i> Pendiente de Ingreso`;
-                    authBtn.classList.remove('opacity-50', 'pointer-events-none');
-                    authBtn.querySelector('span').innerText = "AUTORIZAR INGRESO Y PERMITIR ACCESO";
-                }
-
-                resultBox.classList.remove('hidden');
+                showToast("Vehículo eliminado correctamente", "info");
             } else {
-                resultBox.classList.add('hidden');
-                notFoundBox.classList.remove('hidden');
+                showToast("Clave de borrado de 4 dígitos incorrecta", "error");
             }
-        };
-
-        window.toggleCameraScanner = function() {
-            const placeholder = document.getElementById('cameraPlaceholder');
-            const btnText = document.getElementById('camBtnText');
-
-            if (html5QrScanner && html5QrScanner.isScanning) {
-                html5QrScanner.stop().then(() => {
-                    placeholder.classList.remove('hidden');
-                    btnText.innerText = "Activar Cámara";
-                }).catch(err => console.error(err));
-            } else {
-                placeholder.classList.add('hidden');
-                btnText.innerText = "Detener Cámara";
-
-                html5QrScanner = new Html5Qrcode("qrReader");
-                html5QrScanner.start(
-                    { facingMode: "environment" },
-                    { fps: 10, qrbox: { width: 250, height: 250 } },
-                    (decodedText) => {
-                        document.getElementById('checkerCodeInput').value = decodedText;
-                        searchVehicleCode();
-                        html5QrScanner.stop().then(() => {
-                            placeholder.classList.remove('hidden');
-                            btnText.innerText = "Activar Cámara";
-                        });
-                    },
-                    () => {}
-                ).catch(err => {
-                    showToast("No se pudo acceder a la cámara", "error");
-                    placeholder.classList.remove('hidden');
-                    btnText.innerText = "Activar Cámara";
-                });
-            }
-        };
-
-        window.authorizeVehicleAccess = function() {
-            if (!activeSelectedVehicle) return;
-
-            const v = activeSelectedVehicle;
-            v.estado = 'autorizado';
-            v.fechaAcceso = new Date().toISOString();
-            
-            const accessObj = { id: 'acc_' + Date.now(), patente: v.patente, conductor: v.conductor, timestamp: v.fechaAcceso };
-            saveLocalVehicles();
-            pushCloudStorage(accessObj);
-
-            showToast(`Acceso permitido para ${v.patente}`, "success");
-            searchVehicleCode();
         };
 
         function triggerLiveAccessAlert(patente, conductor) {
-            document.getElementById('alertPatenteText').innerText = patente || 'VEHÍCULO';
-            document.getElementById('alertConductorText').innerText = conductor ? `Conductor: ${conductor}` : 'Vehículo autorizado en portería.';
-            
-            const modal = document.getElementById('liveAlertModal');
-            if (modal) modal.classList.remove('hidden');
-            playAccessChimeSound();
+            document.getElementById('alertPatenteText').innerText = patente;
+            document.getElementById('alertConductorText').innerText = `Conductor: ${conductor}`;
+            document.getElementById('liveAlertModal').classList.remove('hidden');
+
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.4);
+            } catch (e) {}
         }
 
         window.closeLiveAlert = function() {
-            const modal = document.getElementById('liveAlertModal');
-            if (modal) modal.classList.add('hidden');
+            document.getElementById('liveAlertModal').classList.add('hidden');
         };
 
-        function playAccessChimeSound() {
-            try {
-                const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                if (!AudioCtx) return;
-                const ctx = new AudioCtx();
-                const now = ctx.currentTime;
-                
-                const osc1 = ctx.createOscillator();
-                const osc2 = ctx.createOscillator();
-                const gain = ctx.createGain();
-
-                osc1.type = 'sine';
-                osc2.type = 'triangle';
-
-                osc1.frequency.setValueAtTime(523.25, now);
-                osc1.frequency.exponentialRampToValueAtTime(659.25, now + 0.15);
-                osc1.frequency.exponentialRampToValueAtTime(783.99, now + 0.3);
-
-                osc2.frequency.setValueAtTime(261.63, now);
-                osc2.frequency.exponentialRampToValueAtTime(329.63, now + 0.3);
-
-                gain.gain.setValueAtTime(0.3, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
-
-                osc1.connect(gain);
-                osc2.connect(gain);
-                gain.connect(ctx.destination);
-
-                osc1.start(now);
-                osc2.start(now);
-                osc1.stop(now + 0.85);
-                osc2.stop(now + 0.85);
-            } catch(e) {}
-        }
-
-        function showToast(message, type = 'info') {
+        function showToast(msg, type = 'info') {
             const container = document.getElementById('toastContainer');
             if (!container) return;
 
             const toast = document.createElement('div');
-            const bgColor = type === 'success' ? 'bg-emerald-600 text-white' : (type === 'error' ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-100');
-            const icon = type === 'success' ? 'fa-circle-check' : (type === 'error' ? 'fa-triangle-exclamation' : 'fa-info-circle');
+            const bgClass = type === 'success' ? 'bg-emerald-900/90 border-emerald-500 text-emerald-200' : (type === 'error' ? 'bg-rose-900/90 border-rose-500 text-rose-200' : 'bg-slate-900/90 border-slate-700 text-slate-200');
+            const iconClass = type === 'success' ? 'fa-circle-check text-emerald-400' : (type === 'error' ? 'fa-circle-xmark text-rose-400' : 'fa-circle-info text-blue-400');
 
-            toast.className = `${bgColor} px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-white/10 text-xs font-semibold transform transition-all duration-300 translate-y-2 opacity-0 pointer-events-auto`;
-            toast.innerHTML = `<i class="fa-solid ${icon} text-base"></i><span>${message}</span>`;
+            toast.className = `p-3.5 rounded-2xl border backdrop-blur-md shadow-2xl flex items-center gap-3 text-xs font-semibold pointer-events-auto transition-all transform translate-y-2 opacity-0 ${bgClass}`;
+            toast.innerHTML = `<i class="fa-solid ${iconClass} text-base"></i><span>${msg}</span>`;
 
             container.appendChild(toast);
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            });
 
-            setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
             setTimeout(() => {
                 toast.classList.add('opacity-0', 'translate-y-2');
                 setTimeout(() => toast.remove(), 300);
             }, 3500);
         }
 
-        loadLocalData();
-        saveLocalPin();
-        renderUsersList();
-        syncCloudStorage();
-        setInterval(syncCloudStorage, 2500);
+        window.onload = function() {
+            loadLocalData();
+            syncCloudStorage(true);
+            setInterval(() => syncCloudStorage(false), 3000);
+        };
     </script>
 </body>
 </html>
