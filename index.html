@@ -533,18 +533,77 @@
         let html5QrScanner = null;
         let lastKnownAccessId = null;
 
-        // BULLETPROOF MULTI-DEVICE CLOUD SYNC ENGINE
+        // BULLETPROOF MULTI-DEVICE CLOUD SYNC ENGINE WITH SMART UNION MERGING
         const CLOUD_SYNC_URL = 'https://jsonblob.com/api/jsonBlob/1332822183389020160';
+
+        function mergeVehiclesList(localList, cloudList) {
+            const vehicleMap = new Map();
+            const getKey = (v) => v.id || v.clave3 || v.patente;
+
+            // Load local vehicles first
+            (localList || []).forEach(v => {
+                if (v && getKey(v)) vehicleMap.set(getKey(v), { ...v });
+            });
+
+            // Merge cloud vehicles without overwriting local additions
+            (cloudList || []).forEach(v => {
+                if (!v || !getKey(v)) return;
+                const key = getKey(v);
+                if (vehicleMap.has(key)) {
+                    const localV = vehicleMap.get(key);
+                    const mergedV = { ...localV, ...v };
+                    if (localV.estado === 'autorizado' || v.estado === 'autorizado') {
+                        mergedV.estado = 'autorizado';
+                        mergedV.fechaAcceso = localV.fechaAcceso || v.fechaAcceso || new Date().toISOString();
+                    }
+                    vehicleMap.set(key, mergedV);
+                } else {
+                    vehicleMap.set(key, { ...v });
+                }
+            });
+
+            const mergedArr = Array.from(vehicleMap.values());
+            mergedArr.sort((a, b) => new Date(b.fechaRegistro || 0) - new Date(a.fechaRegistro || 0));
+            return mergedArr;
+        }
+
+        function mergeUsersList(localUsers, cloudUsers) {
+            const userMap = new Map();
+            userMap.set('admin', {
+                id: 'admin-default',
+                nombre: 'Administrador Principal',
+                username: 'admin',
+                password: 'admin123',
+                role: 'admin'
+            });
+
+            (localUsers || []).forEach(u => {
+                if (u && u.username) userMap.set(u.username.toLowerCase(), { ...u });
+            });
+
+            (cloudUsers || []).forEach(u => {
+                if (u && u.username) {
+                    const uname = u.username.toLowerCase();
+                    if (userMap.has(uname)) {
+                        userMap.set(uname, { ...userMap.get(uname), ...u });
+                    } else {
+                        userMap.set(uname, { ...u });
+                    }
+                }
+            });
+
+            return Array.from(userMap.values());
+        }
 
         async function syncCloudStorage(isFastLoginSync = false) {
             try {
                 const controller = new AbortController();
-                const timeoutMs = isFastLoginSync ? 1800 : 3000;
+                const timeoutMs = isFastLoginSync ? 2000 : 3500;
                 const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
                 const res = await fetch(CLOUD_SYNC_URL, { 
                     method: 'GET',
-                    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                    headers: { 'Accept': 'application/json', 'Cache-Control': 'no-cache' },
                     cache: 'no-store',
                     signal: controller.signal
                 });
@@ -552,33 +611,28 @@
 
                 if (res.ok) {
                     const cloudData = await res.json();
-                    
-                    // Merge Users
-                    if (cloudData.users && Array.isArray(cloudData.users) && cloudData.users.length > 0) {
-                        const mergedUsers = [...cloudData.users];
-                        if (!mergedUsers.some(u => u.username && u.username.toLowerCase() === 'admin')) {
-                            mergedUsers.unshift({
-                                id: 'admin-default',
-                                nombre: 'Administrador Principal',
-                                username: 'admin',
-                                password: 'admin123',
-                                role: 'admin'
-                            });
-                        }
-                        systemUsers = mergedUsers;
+                    let needsPushBack = false;
+
+                    // Smart Merge Users
+                    const newUsers = mergeUsersList(systemUsers, cloudData.users);
+                    if (JSON.stringify(newUsers) !== JSON.stringify(systemUsers)) {
+                        systemUsers = newUsers;
                         localStorage.setItem('park_app_users', JSON.stringify(systemUsers));
                         renderUsersList();
+                        needsPushBack = true;
                     }
 
-                    // Merge Vehicles
-                    if (cloudData.vehicles && Array.isArray(cloudData.vehicles)) {
-                        vehiclesData = cloudData.vehicles;
+                    // Smart Merge Vehicles (Union of PC + Mobile)
+                    const newVehicles = mergeVehiclesList(vehiclesData, cloudData.vehicles);
+                    if (JSON.stringify(newVehicles) !== JSON.stringify(vehiclesData)) {
+                        vehiclesData = newVehicles;
                         localStorage.setItem('park_app_vehicles', JSON.stringify(vehiclesData));
                         renderDashboard();
+                        needsPushBack = true;
                     }
 
                     // Merge PIN
-                    if (cloudData.deletePin) {
+                    if (cloudData.deletePin && cloudData.deletePin !== systemDeletePin) {
                         systemDeletePin = cloudData.deletePin;
                         localStorage.setItem('park_app_delete_pin', systemDeletePin);
                         const pinInput = document.getElementById('adminPinInput');
@@ -596,10 +650,14 @@
                     }
 
                     setSystemStatus("Nube Sincronizada", "emerald");
+
+                    if (needsPushBack) {
+                        await pushCloudStorage();
+                    }
                     return true;
                 }
             } catch (e) {
-                setSystemStatus("Modo Local Activo", "amber");
+                setSystemStatus("Modo Local", "amber");
             }
             return false;
         }
@@ -614,19 +672,30 @@
                     updatedAt: new Date().toISOString()
                 };
 
-                await fetch(CLOUD_SYNC_URL, {
+                let res = await fetch(CLOUD_SYNC_URL, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify(payload)
                 });
+
+                if (!res.ok && res.status === 404) {
+                    await fetch('https://jsonblob.com/api/jsonBlob', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                }
             } catch (e) {}
         }
 
         window.forceSyncNow = async function() {
-            showToast("Sincronizando datos...", "info");
+            showToast("Sincronizando con la nube...", "info");
             const success = await syncCloudStorage(true);
-            if (success) showToast("¡Sincronizado con éxito!", "success");
-            else showToast("Sincronización local completada", "info");
+            if (success) {
+                showToast(`¡Sincronizado! ${vehiclesData.length} vehículo(s) en total.`, "success");
+            } else {
+                showToast("Sincronización local completada", "info");
+            }
         };
 
         function loadLocalData() {
