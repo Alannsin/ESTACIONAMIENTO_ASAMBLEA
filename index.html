@@ -809,87 +809,39 @@
         function applyRolePermissions(role) {
             const tabReg = document.getElementById('tabRegisterBtn');
             const tabChk = document.getElementById('tabCheckerBtn');
+            const tabDash = document.getElementById('tabDashboardBtn');
             const tabAdm = document.getElementById('tabAdminBtn');
 
-            if (role === 'registrador') {
-                if (tabReg) tabReg.classList.remove('hidden');
-                if (tabChk) tabChk.classList.add('hidden');
-                if (tabAdm) tabAdm.classList.add('hidden');
-                switchTab('register');
-            } else if (role === 'controlador') {
-                if (tabReg) tabReg.classList.add('hidden');
-                if (tabChk) tabChk.classList.remove('hidden');
-                if (tabAdm) tabAdm.classList.add('hidden');
-                switchTab('checker');
-            } else {
-                if (tabReg) tabReg.classList.remove('hidden');
-                if (tabChk) tabChk.classList.remove('hidden');
-                if (tabAdm) tabAdm.classList.remove('hidden');
-                switchTab('register');
-            }
+            const isAdm = (role === 'admin');
+            const isReg = (role === 'registrador');
+            const isChk = (role === 'controlador');
+
+            if (tabReg) tabReg.classList.toggle('hidden', !isReg && !isAdm);
+            if (tabChk) tabChk.classList.toggle('hidden', !isChk && !isAdm);
+            if (tabDash) tabDash.classList.toggle('hidden', false);
+            if (tabAdm) tabAdm.classList.toggle('hidden', !isAdm);
+
+            if (isReg) switchTab('register');
+            else if (isChk) switchTab('checker');
+            else switchTab('register');
         }
-
-        window.handleLoginSubmit = async function(e) {
-            e.preventDefault();
-            const uInput = document.getElementById('loginUsername').value.trim().toLowerCase();
-            const pInput = document.getElementById('loginPassword').value.trim();
-
-            if (!uInput || !pInput) {
-                showToast("Ingrese usuario y contraseña", "error");
-                return;
-            }
-
-            await syncCloudStorage(true);
-
-            let match = systemUsers.find(u => u && u.username && u.username.toLowerCase() === uInput && u.password === pInput);
-            if (!match && uInput === 'admin' && pInput === 'admin123') {
-                match = {
-                    id: 'admin-default',
-                    nombre: 'Administrador Principal',
-                    username: 'admin',
-                    password: 'admin123',
-                    role: 'admin'
-                };
-            }
-
-            if (match) {
-                activeStaffUser = match;
-                try { localStorage.setItem('park_app_active_user', JSON.stringify(match)); } catch(e) {}
-
-                document.getElementById('userProfileName').innerText = match.nombre;
-                document.getElementById('userProfileRole').innerText = match.role;
-                document.getElementById('viewLogin').classList.add('hidden');
-                document.getElementById('userProfileBar').classList.remove('hidden');
-                document.getElementById('mainNav').classList.remove('hidden');
-
-                applyRolePermissions(match.role);
-                showToast(`Bienvenido/a, ${match.nombre}`, "success");
-            } else {
-                showToast("Usuario o contraseña incorrectos", "error");
-            }
-        };
-
-        window.logoutUser = function() {
-            activeStaffUser = null;
-            try { localStorage.removeItem('park_app_active_user'); } catch(e) {}
-            document.getElementById('viewLogin').classList.remove('hidden');
-            document.getElementById('userProfileBar').classList.add('hidden');
-            document.getElementById('mainNav').classList.add('hidden');
-            document.getElementById('loginUsername').value = '';
-            document.getElementById('loginPassword').value = '';
-            showToast("Sesión cerrada", "info");
-        };
 
         window.switchTab = function(tabName) {
             if (activeStaffUser) {
-                if (activeStaffUser.role === 'registrador' && (tabName === 'checker' || tabName === 'admin')) {
+                const r = activeStaffUser.role;
+                if (r === 'registrador' && (tabName === 'checker' || tabName === 'admin')) {
                     showToast("Acceso restringido para el rol Registrador", "error");
                     return;
                 }
-                if (activeStaffUser.role === 'controlador' && (tabName === 'register' || tabName === 'admin')) {
+                if (r === 'controlador' && (tabName === 'register' || tabName === 'admin')) {
                     showToast("Acceso restringido para el rol Controlador", "error");
                     return;
                 }
+            }
+
+            if (tabName === 'admin' && (!activeStaffUser || activeStaffUser.role !== 'admin')) {
+                showToast("Acceso denegado: Se requieren permisos de Administrador", "error");
+                return;
             }
 
             currentTab = tabName;
@@ -899,34 +851,38 @@
                 if (el) el.classList.add('hidden');
             });
 
-            const btns = {
-                register: document.getElementById('tabRegisterBtn'),
-                checker: document.getElementById('tabCheckerBtn'),
-                dashboard: document.getElementById('tabDashboardBtn'),
-                admin: document.getElementById('tabAdminBtn')
-            };
+            // Update active styles without removing the 'hidden' utility class from restricted tabs
+            const navBtns = [
+                { id: 'tabRegisterBtn', key: 'register' },
+                { id: 'tabCheckerBtn', key: 'checker' },
+                { id: 'tabDashboardBtn', key: 'dashboard' },
+                { id: 'tabAdminBtn', key: 'admin' }
+            ];
 
-            Object.keys(btns).forEach(key => {
-                if (btns[key]) {
-                    btns[key].className = "px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-slate-400 hover:text-white transition-all";
+            navBtns.forEach(item => {
+                const btn = document.getElementById(item.id);
+                if (btn) {
+                    if (item.key === tabName) {
+                        btn.classList.add('bg-emerald-500', 'text-slate-950', 'font-bold', 'shadow');
+                        btn.classList.remove('text-slate-400', 'hover:text-white');
+                    } else {
+                        btn.classList.remove('bg-emerald-500', 'text-slate-950', 'font-bold', 'shadow');
+                        btn.classList.add('text-slate-400', 'hover:text-white');
+                    }
                 }
             });
 
             if (tabName === 'register') {
                 resetRegistrationForm();
                 document.getElementById('viewRegister').classList.remove('hidden');
-                if (btns.register) btns.register.className = "px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all bg-emerald-500 text-slate-950 font-bold shadow";
             } else if (tabName === 'checker') {
                 document.getElementById('viewChecker').classList.remove('hidden');
-                if (btns.checker) btns.checker.className = "px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all bg-emerald-500 text-slate-950 font-bold shadow";
             } else if (tabName === 'dashboard') {
                 renderDashboard();
                 document.getElementById('viewDashboard').classList.remove('hidden');
-                if (btns.dashboard) btns.dashboard.className = "px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all bg-emerald-500 text-slate-950 font-bold shadow";
             } else if (tabName === 'admin') {
                 renderUsersList();
                 document.getElementById('viewAdmin').classList.remove('hidden');
-                if (btns.admin) btns.admin.className = "px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all bg-emerald-500 text-slate-950 font-bold shadow";
             }
         };
 
@@ -951,7 +907,7 @@
             systemUsers.push(newUserObj);
             saveLocalUsers();
 
-            showToast(`Usuario "${username}" creado y sincronizado`, "success");
+            showToast(`Usuario "${username}" con rol "${role}" creado correctamente`, "success");
             e.target.reset();
 
             await pushCloudStorage();
