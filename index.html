@@ -44,7 +44,7 @@
                 </div>
             </div>
 
-            <!-- Navigation Tabs (Role Controlled) -->
+            <!-- Navigation Tabs -->
             <nav id="mainNav" class="hidden flex items-center bg-slate-950/80 p-1 rounded-xl border border-slate-800 text-xs sm:text-sm font-medium">
                 <button id="tabRegisterBtn" onclick="switchTab('register')" class="px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all bg-emerald-500 text-slate-950 font-bold shadow">
                     <i class="fa-solid fa-car-side"></i>
@@ -64,7 +64,7 @@
                 </button>
             </nav>
 
-            <!-- User Profile & Logout -->
+            <!-- User Profile & Sync Action -->
             <div id="userProfileBar" class="hidden flex items-center gap-3">
                 <button onclick="forceSyncNow()" title="Sincronizar Datos" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600/80 text-emerald-400 hover:text-white text-xs font-semibold flex items-center gap-1 transition border border-slate-700">
                     <i class="fa-solid fa-rotate"></i>
@@ -387,7 +387,7 @@
                             </tr>
                         </thead>
                         <tbody id="vehiclesTableBody" class="divide-y divide-slate-800/60 font-medium">
-                            <!-- Dynamically populated -->
+                            <!-- Populated dynamically -->
                         </tbody>
                     </table>
                 </div>
@@ -485,6 +485,7 @@
 
     </main>
 
+    <!-- Live Access Granted Alert -->
     <div id="liveAlertModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
         <div class="bg-slate-900 border-2 border-emerald-500 rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center space-y-4 shadow-2xl animate-glow">
             <div class="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto text-3xl">
@@ -501,6 +502,7 @@
         </div>
     </div>
 
+    <!-- Deletion PIN Confirmation Modal -->
     <div id="deleteVehicleModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
             <div class="text-center space-y-1">
@@ -519,37 +521,66 @@
         </div>
     </div>
 
+    <!-- Toast Notification Container -->
     <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4 sm:px-0"></div>
 
     <script type="module">
-        // Global Application State
         let activeStaffUser = null;
         let systemUsers = [];
         let systemDeletePin = '1234';
         let vehiclesData = [];
         let deletedVehicleIds = [];
+        let deletedUserIds = [];
         let lastClearedAt = 0;
         let activeSelectedVehicle = null;
         let vehicleToDeleteId = null;
         let currentTab = 'register';
         let html5QrScanner = null;
         let lastKnownAccessId = null;
+        let lastMutationTime = 0;
 
-        // BULLETPROOF MULTI-DEVICE CLOUD SYNC ENGINE WITH SMART DELETION TRACKING
         const CLOUD_SYNC_URL = 'https://jsonblob.com/api/jsonBlob/1332822183389020160';
+
+        function mergeUsersList(localUsers, cloudUsers) {
+            const userMap = new Map();
+            userMap.set('admin', {
+                id: 'admin-default',
+                nombre: 'Administrador Principal',
+                username: 'admin',
+                password: 'admin123',
+                role: 'admin'
+            });
+
+            (localUsers || []).forEach(u => {
+                if (u && u.username && !deletedUserIds.includes(u.id)) {
+                    userMap.set(u.username.toLowerCase(), { ...u });
+                }
+            });
+
+            (cloudUsers || []).forEach(u => {
+                if (u && u.username && !deletedUserIds.includes(u.id)) {
+                    const uname = u.username.toLowerCase();
+                    if (userMap.has(uname)) {
+                        userMap.set(uname, { ...userMap.get(uname), ...u });
+                    } else {
+                        userMap.set(uname, { ...u });
+                    }
+                }
+            });
+
+            return Array.from(userMap.values());
+        }
 
         function mergeSyncData(cloudData) {
             if (!cloudData) return false;
             let changed = false;
 
-            // 1. Sync lastClearedAt (Global wipe timestamp)
             if (cloudData.lastClearedAt && cloudData.lastClearedAt > lastClearedAt) {
                 lastClearedAt = cloudData.lastClearedAt;
                 localStorage.setItem('park_app_cleared_at', lastClearedAt.toString());
                 changed = true;
             }
 
-            // 2. Sync deletedVehicleIds
             if (Array.isArray(cloudData.deletedVehicleIds)) {
                 const prevSize = deletedVehicleIds.length;
                 deletedVehicleIds = Array.from(new Set([...deletedVehicleIds, ...cloudData.deletedVehicleIds]));
@@ -559,7 +590,15 @@
                 }
             }
 
-            // 3. Merge Vehicles (Filtering out wiped or deleted items)
+            if (Array.isArray(cloudData.deletedUserIds)) {
+                const prevSize = deletedUserIds.length;
+                deletedUserIds = Array.from(new Set([...deletedUserIds, ...cloudData.deletedUserIds]));
+                if (deletedUserIds.length !== prevSize) {
+                    localStorage.setItem('park_app_deleted_user_ids', JSON.stringify(deletedUserIds));
+                    changed = true;
+                }
+            }
+
             const filteredLocal = vehiclesData.filter(v => {
                 const regTime = new Date(v.fechaRegistro || 0).getTime();
                 return regTime > lastClearedAt && !deletedVehicleIds.includes(v.id);
@@ -598,7 +637,6 @@
                 changed = true;
             }
 
-            // 4. Merge Users
             const newUsers = mergeUsersList(systemUsers, cloudData.users);
             if (JSON.stringify(newUsers) !== JSON.stringify(systemUsers)) {
                 systemUsers = newUsers;
@@ -607,7 +645,6 @@
                 changed = true;
             }
 
-            // 5. Merge Delete PIN
             if (cloudData.deletePin && cloudData.deletePin !== systemDeletePin) {
                 systemDeletePin = cloudData.deletePin;
                 localStorage.setItem('park_app_delete_pin', systemDeletePin);
@@ -616,7 +653,6 @@
                 changed = true;
             }
 
-            // 6. Real-time Access Granted Alert
             if (cloudData.lastAccess && cloudData.lastAccess.id !== lastKnownAccessId) {
                 if (lastKnownAccessId !== null) {
                     triggerLiveAccessAlert(cloudData.lastAccess.patente, cloudData.lastAccess.conductor);
@@ -629,35 +665,11 @@
             return changed;
         }
 
-        function mergeUsersList(localUsers, cloudUsers) {
-            const userMap = new Map();
-            userMap.set('admin', {
-                id: 'admin-default',
-                nombre: 'Administrador Principal',
-                username: 'admin',
-                password: 'admin123',
-                role: 'admin'
-            });
-
-            (localUsers || []).forEach(u => {
-                if (u && u.username) userMap.set(u.username.toLowerCase(), { ...u });
-            });
-
-            (cloudUsers || []).forEach(u => {
-                if (u && u.username) {
-                    const uname = u.username.toLowerCase();
-                    if (userMap.has(uname)) {
-                        userMap.set(uname, { ...userMap.get(uname), ...u });
-                    } else {
-                        userMap.set(uname, { ...u });
-                    }
-                }
-            });
-
-            return Array.from(userMap.values());
-        }
-
         async function syncCloudStorage(isFastLoginSync = false) {
+            if (Date.now() - lastMutationTime < 3000 && !isFastLoginSync) {
+                return false;
+            }
+
             try {
                 const controller = new AbortController();
                 const timeoutMs = isFastLoginSync ? 2000 : 3500;
@@ -675,7 +687,7 @@
                     const cloudData = await res.json();
                     const needsPushBack = mergeSyncData(cloudData);
 
-                    setSystemStatus("Nube Sincronizada", "emerald");
+                    setSystemStatus("Sistema Listo", "emerald");
 
                     if (needsPushBack) {
                         await pushCloudStorage();
@@ -691,10 +703,11 @@
         async function pushCloudStorage(lastAccessObj = null) {
             try {
                 const payload = {
-                    users: systemUsers,
+                    users: systemUsers.filter(u => !deletedUserIds.includes(u.id)),
                     vehicles: vehiclesData,
                     deletePin: systemDeletePin,
                     deletedVehicleIds: deletedVehicleIds,
+                    deletedUserIds: deletedUserIds,
                     lastClearedAt: lastClearedAt,
                     lastAccess: lastAccessObj || (lastKnownAccessId ? { id: lastKnownAccessId } : null),
                     updatedAt: new Date().toISOString()
@@ -753,18 +766,23 @@
 
                 const storedDeletedIds = localStorage.getItem('park_app_deleted_ids');
                 if (storedDeletedIds) deletedVehicleIds = JSON.parse(storedDeletedIds);
+
+                const storedDeletedUserIds = localStorage.getItem('park_app_deleted_user_ids');
+                if (storedDeletedUserIds) deletedUserIds = JSON.parse(storedDeletedUserIds);
             } catch (e) {}
         }
 
         function saveLocalUsers() {
             try { localStorage.setItem('park_app_users', JSON.stringify(systemUsers)); } catch (e) {}
             renderUsersList();
+            lastMutationTime = Date.now();
             pushCloudStorage();
         }
 
         function saveLocalVehicles() {
             try { localStorage.setItem('park_app_vehicles', JSON.stringify(vehiclesData)); } catch (e) {}
             renderDashboard();
+            lastMutationTime = Date.now();
             pushCloudStorage();
         }
 
@@ -772,81 +790,71 @@
             try { localStorage.setItem('park_app_delete_pin', systemDeletePin); } catch (e) {}
             const pinInput = document.getElementById('adminPinInput');
             if (pinInput) pinInput.value = systemDeletePin;
+            lastMutationTime = Date.now();
             pushCloudStorage();
         }
 
-        loadLocalData();
-        saveLocalPin();
-        renderUsersList();
-        syncCloudStorage();
-        setInterval(syncCloudStorage, 2500);
-
         function setSystemStatus(text, color) {
             const dot = document.getElementById('syncStatusDot');
-            const txt = document.getElementById('syncStatusText');
-            if (txt) txt.innerText = text;
-            if (dot) {
-                dot.className = color === "emerald" 
-                    ? "w-2 h-2 rounded-full bg-emerald-400 animate-pulse" 
-                    : "w-2 h-2 rounded-full bg-amber-400";
+            const label = document.getElementById('syncStatusText');
+            if (dot && label) {
+                label.innerText = text;
+                if (color === 'emerald') {
+                    dot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+                } else {
+                    dot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+                }
             }
         }
 
         window.handleLoginSubmit = async function(e) {
-            if (e) e.preventDefault();
-            const uInput = document.getElementById('loginUsername');
-            const pInput = document.getElementById('loginPassword');
-            const u = uInput ? uInput.value.trim().toLowerCase() : '';
-            const p = pInput ? pInput.value.trim() : '';
+            e.preventDefault();
+            const uInput = document.getElementById('loginUsername').value.trim().toLowerCase();
+            const pInput = document.getElementById('loginPassword').value.trim();
 
-            const btnSubmit = document.getElementById('btnLoginSubmit');
-            if (btnSubmit) {
-                btnSubmit.disabled = true;
-                btnSubmit.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Validando...`;
-            }
+            await syncCloudStorage(true);
 
-            try { await syncCloudStorage(true); } catch (err) {}
-
-            if (btnSubmit) {
-                btnSubmit.disabled = false;
-                btnSubmit.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> <span>Iniciar Sesión</span>`;
-            }
-
-            let found = systemUsers.find(user => 
-                user.username && user.username.trim().toLowerCase() === u && user.password && user.password.trim() === p
-            );
-
-            if (!found && u === 'admin' && p === 'admin123') {
-                found = {
-                    id: 'admin-fallback',
+            let match = systemUsers.find(u => u.username.toLowerCase() === uInput && u.password === pInput);
+            if (!match && uInput === 'admin' && pInput === 'admin123') {
+                match = {
+                    id: 'admin-default',
+                    nombre: 'Administrador Principal',
                     username: 'admin',
                     password: 'admin123',
-                    nombre: 'Administrador Principal',
                     role: 'admin'
                 };
             }
 
-            if (found) {
-                activeStaffUser = found;
+            if (match) {
+                activeStaffUser = match;
+                document.getElementById('userProfileName').innerText = match.nombre;
+                document.getElementById('userProfileRole').innerText = match.role;
                 document.getElementById('viewLogin').classList.add('hidden');
-                
-                const mainNav = document.getElementById('mainNav');
-                if (mainNav) {
-                    mainNav.classList.remove('hidden');
-                    mainNav.classList.add('flex');
+                document.getElementById('userProfileBar').classList.remove('hidden');
+                document.getElementById('mainNav').classList.remove('hidden');
+
+                const tabReg = document.getElementById('tabRegisterBtn');
+                const tabChk = document.getElementById('tabCheckerBtn');
+                const tabAdm = document.getElementById('tabAdminBtn');
+
+                if (match.role === 'registrador') {
+                    tabReg.classList.remove('hidden');
+                    tabChk.classList.add('hidden');
+                    tabAdm.classList.add('hidden');
+                    switchTab('register');
+                } else if (match.role === 'controlador') {
+                    tabReg.classList.add('hidden');
+                    tabChk.classList.remove('hidden');
+                    tabAdm.classList.add('hidden');
+                    switchTab('checker');
+                } else {
+                    tabReg.classList.remove('hidden');
+                    tabChk.classList.remove('hidden');
+                    tabAdm.classList.remove('hidden');
+                    switchTab('register');
                 }
 
-                const userBar = document.getElementById('userProfileBar');
-                if (userBar) {
-                    userBar.classList.remove('hidden');
-                    userBar.classList.add('flex');
-                }
-                
-                document.getElementById('userProfileName').innerText = found.nombre;
-                document.getElementById('userProfileRole').innerText = (found.role || 'ADMIN').toUpperCase();
-
-                applyRolePermissions(found.role || 'admin');
-                showToast(`Bienvenido/a ${found.nombre}`, "success");
+                showToast(`Bienvenido/a, ${match.nombre}`, "success");
             } else {
                 showToast("Usuario o contraseña incorrectos", "error");
             }
@@ -855,98 +863,52 @@
         window.logoutUser = function() {
             activeStaffUser = null;
             document.getElementById('viewLogin').classList.remove('hidden');
-            document.getElementById('mainNav').classList.add('hidden');
             document.getElementById('userProfileBar').classList.add('hidden');
+            document.getElementById('mainNav').classList.add('hidden');
             document.getElementById('loginUsername').value = '';
             document.getElementById('loginPassword').value = '';
+            showToast("Sesión cerrada", "info");
         };
 
-        function applyRolePermissions(role) {
-            const btnReg = document.getElementById('tabRegisterBtn');
-            const btnCheck = document.getElementById('tabCheckerBtn');
-            const btnDash = document.getElementById('tabDashboardBtn');
-            const btnAdmin = document.getElementById('tabAdminBtn');
-
-            if (!btnReg || !btnCheck || !btnDash || !btnAdmin) return;
-
-            btnReg.classList.remove('hidden');
-            btnCheck.classList.remove('hidden');
-            btnDash.classList.remove('hidden');
-            btnAdmin.classList.remove('hidden');
-
-            if (role === 'registrador') {
-                btnCheck.classList.add('hidden');
-                btnAdmin.classList.add('hidden');
-                switchTab('register');
-            } else if (role === 'controlador') {
-                btnReg.classList.add('hidden');
-                btnAdmin.classList.add('hidden');
-                switchTab('checker');
-            } else {
-                switchTab('register');
-            }
-        }
-
         window.switchTab = function(tabName) {
-            const role = activeStaffUser ? (activeStaffUser.role || 'admin') : 'admin';
-
-            if (tabName === 'admin' && role !== 'admin') {
-                showToast("No tienes permisos para acceder a Administración", "error");
-                return;
-            }
-            if (tabName === 'checker' && role === 'registrador') {
-                showToast("Los registradores no tienen acceso al módulo de Control", "error");
-                return;
-            }
-            if (tabName === 'register' && role === 'controlador') {
-                showToast("Los controladores no tienen acceso al módulo de Registro", "error");
-                return;
-            }
-
             currentTab = tabName;
-            
-            const btnReg = document.getElementById('tabRegisterBtn');
-            const btnCheck = document.getElementById('tabCheckerBtn');
-            const btnDash = document.getElementById('tabDashboardBtn');
-            const btnAdmin = document.getElementById('tabAdminBtn');
+            const views = ['Register', 'Checker', 'Dashboard', 'Admin', 'PassResult'];
+            views.forEach(v => {
+                const el = document.getElementById('view' + v);
+                if (el) el.classList.add('hidden');
+            });
 
-            const viewReg = document.getElementById('viewRegister');
-            const viewPass = document.getElementById('viewPassResult');
-            const viewCheck = document.getElementById('viewChecker');
-            const viewDash = document.getElementById('viewDashboard');
-            const viewAdmin = document.getElementById('viewAdmin');
+            const btns = {
+                register: document.getElementById('tabRegisterBtn'),
+                checker: document.getElementById('tabCheckerBtn'),
+                dashboard: document.getElementById('tabDashboardBtn'),
+                admin: document.getElementById('tabAdminBtn')
+            };
 
-            const inactiveStyle = "px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-slate-400 hover:text-white transition-all";
-            const activeStyle = "px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all bg-emerald-500 text-slate-950 font-bold shadow";
-
-            [btnReg, btnCheck, btnDash, btnAdmin].forEach(b => {
-                if (b) {
-                    const isHidden = b.classList.contains('hidden');
-                    b.className = inactiveStyle + (isHidden ? ' hidden' : '');
+            Object.keys(btns).forEach(key => {
+                if (btns[key]) {
+                    btns[key].className = "px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-slate-400 hover:text-white transition-all";
                 }
             });
 
-            [viewReg, viewPass, viewCheck, viewDash, viewAdmin].forEach(v => {
-                if (v) v.classList.add('hidden');
-            });
-
-            if (tabName === 'register' && btnReg) {
-                btnReg.className = activeStyle;
+            if (tabName === 'register') {
                 resetRegistrationForm();
-            } else if (tabName === 'checker' && btnCheck) {
-                btnCheck.className = activeStyle;
-                if (viewCheck) viewCheck.classList.remove('hidden');
-            } else if (tabName === 'dashboard' && btnDash) {
-                btnDash.className = activeStyle;
-                if (viewDash) viewDash.classList.remove('hidden');
+                if (btns.register) btns.register.className = "px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all bg-emerald-500 text-slate-950 font-bold shadow";
+            } else if (tabName === 'checker') {
+                document.getElementById('viewChecker').classList.remove('hidden');
+                if (btns.checker) btns.checker.className = "px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all bg-emerald-500 text-slate-950 font-bold shadow";
+            } else if (tabName === 'dashboard') {
                 renderDashboard();
-            } else if (tabName === 'admin' && btnAdmin) {
-                btnAdmin.className = activeStyle;
-                if (viewAdmin) viewAdmin.classList.remove('hidden');
+                document.getElementById('viewDashboard').classList.remove('hidden');
+                if (btns.dashboard) btns.dashboard.className = "px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all bg-emerald-500 text-slate-950 font-bold shadow";
+            } else if (tabName === 'admin') {
+                renderUsersList();
+                document.getElementById('viewAdmin').classList.remove('hidden');
+                if (btns.admin) btns.admin.className = "px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all bg-emerald-500 text-slate-950 font-bold shadow";
             }
         };
 
-        window.handleCreateUserSubmit = function(e) {
+        window.handleCreateUserSubmit = async function(e) {
             e.preventDefault();
             if (!activeStaffUser || activeStaffUser.role !== 'admin') {
                 showToast("Se requieren permisos de Administrador", "error");
@@ -969,10 +931,16 @@
 
             showToast(`Usuario "${username}" creado y sincronizado`, "success");
             e.target.reset();
+
+            await pushCloudStorage();
         };
 
         window.deleteStaffUser = function(userId) {
             if (!activeStaffUser || activeStaffUser.role !== 'admin') return;
+            if (!deletedUserIds.includes(userId)) {
+                deletedUserIds.push(userId);
+                localStorage.setItem('park_app_deleted_user_ids', JSON.stringify(deletedUserIds));
+            }
             systemUsers = systemUsers.filter(u => u.id !== userId);
             saveLocalUsers();
             showToast("Usuario eliminado correctamente", "info");
@@ -1480,6 +1448,12 @@
                 setTimeout(() => toast.remove(), 300);
             }, 3500);
         }
+
+        loadLocalData();
+        saveLocalPin();
+        renderUsersList();
+        syncCloudStorage();
+        setInterval(syncCloudStorage, 2500);
     </script>
 </body>
 </html>
