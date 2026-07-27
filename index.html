@@ -1,7 +1,52 @@
-<!-- ... existing code ... -->
-    <!-- Navigation Tabs -->
-            <nav id="mainNav" class="hidden flex items-center bg-slate-900/80 p-1 rounded-xl border border-slate-700/80 text-xs sm:text-sm font-medium">
-                <button id="tabRegisterBtn" onclick="switchTab('register')" class="px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all bg-emerald-500 text-slate-950 font-semibold shadow">
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estacionamiento Reservado</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome 6 CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Html5Qrcode Scanner Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); }
+            50% { box-shadow: 0 0 30px rgba(16, 185, 129, 0.5); }
+        }
+        .animate-glow { animation: pulseGlow 3s infinite; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-emerald-500 selection:text-slate-950">
+
+    <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-30 px-4 py-3">
+        <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
+            <!-- Brand Logo -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center font-black text-xl shadow-lg shadow-emerald-500/20">
+                    <i class="fa-solid fa-square-parking"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-base sm:text-lg tracking-tight text-white leading-none">Estacionamiento Reservado</h1>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span id="syncStatusDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span id="syncStatusText" class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Sistema Listo</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs (Role Controlled) -->
+            <nav id="mainNav" class="hidden flex items-center bg-slate-950/80 p-1 rounded-xl border border-slate-800 text-xs sm:text-sm font-medium">
+                <button id="tabRegisterBtn" onclick="switchTab('register')" class="px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all bg-emerald-500 text-slate-950 font-bold shadow">
                     <i class="fa-solid fa-car-side"></i>
                     <span>Registrar</span>
                 </button>
@@ -19,65 +64,341 @@
                 </button>
             </nav>
 
-            <!-- User Status & Logout -->
+            <!-- User Profile & Logout -->
             <div id="userProfileBar" class="hidden flex items-center gap-3">
-                <button onclick="forceSyncNow()" title="Forzar Sincronización en la Nube" class="px-2.5 py-1.5 rounded-xl bg-slate-700/60 hover:bg-emerald-600/80 text-emerald-400 hover:text-white text-xs font-semibold flex items-center gap-1 transition">
-                    <i class="fa-solid fa-rotate animate-spin-hover"></i>
+                <button onclick="forceSyncNow()" title="Sincronizar Datos" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600/80 text-emerald-400 hover:text-white text-xs font-semibold flex items-center gap-1 transition border border-slate-700">
+                    <i class="fa-solid fa-rotate"></i>
                     <span class="hidden sm:inline">Sincronizar</span>
                 </button>
                 <div class="text-right text-xs">
                     <span id="userProfileName" class="block font-bold text-white">Usuario</span>
-                    <span id="userProfileRole" class="block text-[10px] text-emerald-400 font-semibold uppercase">Rol</span>
+                    <span id="userProfileRole" class="block text-[10px] text-emerald-400 font-bold uppercase">Rol</span>
                 </div>
-                <button onclick="logoutUser()" title="Cerrar Sesión" class="p-2 rounded-xl bg-slate-700/60 hover:bg-rose-600/80 text-slate-300 hover:text-white transition">
+                <button onclick="logoutUser()" title="Cerrar Sesión" class="p-2 rounded-xl bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white transition border border-slate-700">
                     <i class="fa-solid fa-right-from-bracket"></i>
                 </button>
             </div>
         </div>
     </header>
 
-    <!-- Login View Screen -->
-    <div id="viewLogin" class="fixed inset-0 z-40 bg-slate-950 flex items-center justify-center p-4">
-        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6">
-            <div class="text-center space-y-2">
-                <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20">
-                    <i class="fa-solid fa-square-parking text-slate-950 text-3xl font-bold"></i>
+    <div id="viewLogin" class="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6">
+            <div class="text-center space-y-3">
+                <div class="w-16 h-16 rounded-2xl bg-emerald-500 text-slate-950 flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/20">
+                    <i class="fa-solid fa-square-parking text-3xl font-black"></i>
                 </div>
-                <h2 class="text-2xl font-bold text-white">Acceso al Sistema</h2>
+                <h2 class="text-2xl font-black text-white">Acceso al Sistema</h2>
                 <p class="text-xs text-slate-400">Ingrese su usuario y contraseña otorgados por el administrador para continuar.</p>
             </div>
 
             <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Usuario</label>
-                    <input type="text" id="loginUsername" required placeholder="Ej: operador1" autocapitalize="none" autocomplete="off" autocorrect="off" spellcheck="false" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 text-sm">
+                    <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Usuario</label>
+                    <input type="text" id="loginUsername" required placeholder="Ej: operador1" autocapitalize="none" autocomplete="off" autocorrect="off" spellcheck="false" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 text-sm font-medium transition">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Contraseña</label>
-                    <input type="password" id="loginPassword" required placeholder="••••••••" autocapitalize="none" autocomplete="off" autocorrect="off" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 text-sm">
+                    <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Contraseña</label>
+                    <input type="password" id="loginPassword" required placeholder="••••••••" autocapitalize="none" autocomplete="off" autocorrect="off" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 text-sm font-medium transition">
                 </div>
                 
-                <button type="submit" id="btnLoginSubmit" class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold py-3 px-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+                <button type="submit" id="btnLoginSubmit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-3.5 px-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm uppercase tracking-wider">
                     <i class="fa-solid fa-right-to-bracket"></i>
                     <span>Iniciar Sesión</span>
                 </button>
             </form>
-
-            <div class="pt-2 text-center">
-                <button type="button" onclick="forceSyncNow()" class="text-xs text-emerald-400 hover:text-emerald-300 underline flex items-center justify-center gap-1.5 mx-auto">
-                    <i class="fa-solid fa-rotate"></i>
-                    <span>Sincronizar usuarios desde la nube</span>
-                </button>
-            </div>
         </div>
     </div>
-<!-- ... existing code ... -->
-        <!-- Admin Panel View -->
+
+    <main class="max-w-6xl mx-auto w-full p-4 sm:p-6 flex-grow">
+        
+        <!-- Registration View -->
+        <section id="viewRegister" class="hidden space-y-6">
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-2xl mx-auto shadow-xl space-y-6">
+                <div class="border-b border-slate-800 pb-4">
+                    <h2 class="text-xl sm:text-2xl font-extrabold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-car-side text-emerald-400"></i>
+                        Cargar Vehículo Particular
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">Complete los datos del conductor y vehículo para generar la clave de acceso de 3 dígitos.</p>
+                </div>
+
+                <form id="vehicleForm" onsubmit="handleRegisterSubmit(event)" class="space-y-5">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Nombre</label>
+                            <input type="text" id="regNombre" required placeholder="Ej: Juan" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Apellido</label>
+                            <input type="text" id="regApellido" required placeholder="Ej: Pérez" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Matrícula / Patente</label>
+                            <input type="text" id="regPatente" required placeholder="Ej: AA123CD" autocapitalize="characters" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm font-mono uppercase font-bold text-emerald-400 focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Celular (WhatsApp)</label>
+                            <input type="tel" id="regCelular" required placeholder="Ej: +5492991234567" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Congregación del Conductor</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                                <i class="fa-solid fa-users"></i>
+                            </span>
+                            <input type="text" id="regCongregacion" required placeholder="Ej: Centro Neuquén" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 space-y-3">
+                        <label class="block text-xs font-bold text-amber-400 uppercase tracking-wider">
+                            ¿Lleva a alguien con discapacidad o mayor de edad?
+                        </label>
+                        <div class="flex items-center gap-6 text-sm">
+                            <label class="flex items-center gap-2 cursor-pointer font-medium">
+                                <input type="radio" name="regDisc" value="no" checked onclick="toggleDiscDetalle(false)" class="text-emerald-500 focus:ring-emerald-500">
+                                <span>No</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer font-medium text-amber-300">
+                                <input type="radio" name="regDisc" value="si" onclick="toggleDiscDetalle(true)" class="text-emerald-500 focus:ring-emerald-500">
+                                <span>Sí (Requiere prioridad)</span>
+                            </label>
+                        </div>
+                        
+                        <div id="discDetalleBox" class="hidden pt-2">
+                            <input type="text" id="regDiscDetalle" placeholder="Detalle (Ej: Silla de ruedas, movilidad reducida)" class="w-full bg-slate-900 border border-amber-500/40 rounded-xl px-3.5 py-2 text-xs text-amber-200 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <button type="submit" id="submitRegBtn" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-3.5 px-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2 uppercase tracking-wider text-sm">
+                        <i class="fa-solid fa-key"></i>
+                        <span>Registrar y Generar Clave de 3 Dígitos</span>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <section id="viewPassResult" class="hidden space-y-6">
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-xl mx-auto shadow-2xl text-center space-y-6">
+                <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 text-2xl mb-1">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                
+                <h2 class="text-2xl font-black text-white">¡Vehículo Registrado Con Éxito!</h2>
+
+                <!-- Big Code Badge -->
+                <div class="bg-slate-950 border-2 border-emerald-500/80 rounded-2xl p-6 shadow-xl animate-glow max-w-sm mx-auto space-y-1">
+                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest block">Clave de Acceso Única</span>
+                    <span id="resultCodeDisplay" class="text-6xl font-black tracking-widest font-mono text-emerald-400 block">---</span>
+                </div>
+
+                <!-- Ticket Canvas Hidden container for PNG export -->
+                <div class="hidden">
+                    <canvas id="ticketCanvas" width="600" height="750"></canvas>
+                </div>
+
+                <!-- Summary Details -->
+                <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 text-left text-xs space-y-2">
+                    <div class="flex justify-between border-b border-slate-800 pb-2">
+                        <span class="text-slate-400">Conductor:</span>
+                        <span id="resNombreCompleto" class="font-bold text-white">---</span>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-800 pb-2">
+                        <span class="text-slate-400">Matrícula / Patente:</span>
+                        <span id="resPatente" class="font-bold font-mono text-emerald-400 uppercase">---</span>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-800 pb-2">
+                        <span class="text-slate-400">Celular:</span>
+                        <span id="resCelular" class="font-medium text-slate-200">---</span>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-800 pb-2">
+                        <span class="text-slate-400">Congregación:</span>
+                        <span id="resCongregacion" class="font-medium text-slate-200">---</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Prioridad:</span>
+                        <span id="resDisc" class="font-bold text-amber-400">---</span>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <button onclick="shareWhatsApp()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl text-xs transition flex items-center justify-center gap-2 shadow">
+                        <i class="fa-brands fa-whatsapp text-lg"></i>
+                        <span>Enviar Pase por WhatsApp</span>
+                    </button>
+                    <button onclick="downloadPassImage()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-4 rounded-xl text-xs transition flex items-center justify-center gap-2 border border-slate-700">
+                        <i class="fa-solid fa-download text-lg"></i>
+                        <span>Descargar Pase como Imagen</span>
+                    </button>
+                </div>
+
+                <div class="pt-4 border-t border-slate-800">
+                    <button onclick="resetRegistrationForm()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider transition flex items-center justify-center gap-2 shadow-lg">
+                        <i class="fa-solid fa-plus-circle text-base"></i>
+                        <span>Registrar Nuevo Vehículo</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section id="viewChecker" class="hidden space-y-6">
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-2xl mx-auto shadow-xl space-y-6">
+                <div class="border-b border-slate-800 pb-4">
+                    <h2 class="text-xl sm:text-2xl font-extrabold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-qrcode text-emerald-400"></i>
+                        Control de Acceso al Estacionamiento
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">Digite la clave de 3 dígitos, escanee con la cámara o ingrese la patente del vehículo.</p>
+                </div>
+
+                <!-- Search / Scanner Input -->
+                <div class="space-y-4">
+                    <div class="flex gap-2">
+                        <input type="text" id="checkerCodeInput" placeholder="Ej: 6VZ o Patente" uppercase autocapitalize="characters" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 font-mono text-center text-xl font-bold uppercase tracking-widest text-emerald-400 focus:outline-none focus:border-emerald-500">
+                        <button onclick="searchVehicleCode()" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-6 rounded-xl transition text-sm">
+                            Buscar
+                        </button>
+                    </div>
+
+                    <!-- Camera Scanner Container -->
+                    <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 text-center space-y-3">
+                        <div id="qrReader" class="overflow-hidden rounded-xl bg-slate-900"></div>
+                        <div id="cameraPlaceholder" class="py-6 text-slate-500 text-xs">
+                            <i class="fa-solid fa-camera text-3xl mb-2 block"></i>
+                            <span>Presione el botón para activar la cámara del celular.</span>
+                        </div>
+                        <button onclick="toggleCameraScanner()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold px-4 py-2 rounded-xl text-xs transition border border-slate-700 flex items-center justify-center gap-2 mx-auto">
+                            <i class="fa-solid fa-video"></i>
+                            <span id="camBtnText">Activar Cámara</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Search Result Card -->
+                <div id="checkerResultBox" class="hidden bg-slate-950 border-2 border-emerald-500/80 rounded-2xl p-6 space-y-5 shadow-2xl">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                        <div>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase">Clave de Acceso</span>
+                            <span id="checkResultCode" class="text-3xl font-black font-mono text-emerald-400 block">---</span>
+                        </div>
+                        <span id="vehicleStatusBadge" class="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                            Pendiente
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 text-xs">
+                        <div>
+                            <span class="text-slate-400 block">Conductor:</span>
+                            <span id="checkNombreConductor" class="font-bold text-white text-sm">---</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block">Matrícula / Patente:</span>
+                            <span id="checkPatente" class="font-bold font-mono text-emerald-400 text-sm uppercase">---</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block">Congregación:</span>
+                            <span id="checkCongregacion" class="font-medium text-slate-200">---</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block">Celular:</span>
+                            <span id="checkCelular" class="font-medium text-slate-200">---</span>
+                        </div>
+                        <div class="col-span-2 bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+                            <span class="text-slate-400 block text-[10px]">Prioridad / Discapacidad:</span>
+                            <span id="checkDiscDetalle" class="font-bold text-amber-300">---</span>
+                        </div>
+                    </div>
+
+                    <button id="authorizeAccessBtn" onclick="authorizeVehicleAccess()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider transition shadow-lg flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-circle-check text-base"></i>
+                        <span>AUTORIZAR INGRESO Y PERMITIR ACCESO</span>
+                    </button>
+                </div>
+
+                <!-- Not Found Box -->
+                <div id="checkerNotFound" class="hidden bg-rose-950/40 border border-rose-500/40 rounded-2xl p-6 text-center text-rose-300 text-xs space-y-2">
+                    <i class="fa-solid fa-triangle-exclamation text-3xl text-rose-400"></i>
+                    <p class="font-bold text-sm">No se encontró ningún vehículo registrado con esa clave o patente.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="viewDashboard" class="hidden space-y-6">
+            <!-- Stats Bar -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] font-bold text-slate-400 uppercase">Capacidad Utilizada</span>
+                        <div class="text-2xl font-black text-white mt-0.5"><span id="statTotal">0</span> <span class="text-xs text-slate-500 font-normal">/ 2000 máx.</span></div>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-slate-800 text-slate-300 flex items-center justify-center">
+                        <i class="fa-solid fa-car"></i>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] font-bold text-slate-400 uppercase">Ingresaron Hoy</span>
+                        <div id="statAutorizados" class="text-2xl font-black text-emerald-400 mt-0.5">0</div>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] font-bold text-slate-400 uppercase">Pendientes</span>
+                        <div id="statPendientes" class="text-2xl font-black text-amber-400 mt-0.5">0</div>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vehicles Table Container -->
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-emerald-400"></i>
+                        Lista de Vehículos Registrados
+                    </h2>
+                    <input type="text" id="dashSearchInput" oninput="filterDashboardTable()" placeholder="Buscar por clave, patente o nombre..." class="w-full sm:w-72 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-300">
+                        <thead class="bg-slate-950 text-slate-400 uppercase text-[10px] font-bold tracking-wider">
+                            <tr>
+                                <th class="px-4 py-3 rounded-l-xl">Clave</th>
+                                <th class="px-4 py-3">Matrícula</th>
+                                <th class="px-4 py-3">Conductor</th>
+                                <th class="px-4 py-3">Congregación</th>
+                                <th class="px-4 py-3">Prioridad</th>
+                                <th class="px-4 py-3">Estado</th>
+                                <th class="px-4 py-3 text-right rounded-r-xl">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vehiclesTableBody" class="divide-y divide-slate-800/60 font-medium">
+                            <!-- Dynamically populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
         <section id="viewAdmin" class="hidden space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- User Creation & Management -->
-                <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-5 space-y-4">
-                    <div class="border-b border-slate-700 pb-3">
+                <!-- User Creation Form -->
+                <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
+                    <div class="border-b border-slate-800 pb-3">
                         <h2 class="text-lg font-bold text-white flex items-center gap-2">
                             <i class="fa-solid fa-user-plus text-emerald-400"></i>
                             Crear Usuario Operador
@@ -87,37 +408,36 @@
 
                     <form onsubmit="handleCreateUserSubmit(event)" class="space-y-3">
                         <div>
-                            <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Nombre Completo</label>
-                            <input type="text" id="adminNewNombre" required placeholder="Ej: Pedro Gómez" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100">
+                            <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Nombre Completo</label>
+                            <input type="text" id="adminNewNombre" required placeholder="Ej: Pedro Gómez" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white">
                         </div>
                         <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Usuario</label>
-                                <input type="text" id="adminNewUsername" required placeholder="Ej: pedro1" autocapitalize="none" autocomplete="off" autocorrect="off" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100">
+                                <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Usuario</label>
+                                <input type="text" id="adminNewUsername" required placeholder="Ej: pedro1" autocapitalize="none" autocomplete="off" autocorrect="off" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white">
                             </div>
                             <div>
-                                <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Contraseña</label>
-                                <input type="password" id="adminNewPassword" required placeholder="••••••" autocapitalize="none" autocomplete="off" autocorrect="off" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100">
+                                <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Contraseña</label>
+                                <input type="password" id="adminNewPassword" required placeholder="••••••" autocapitalize="none" autocomplete="off" autocorrect="off" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white">
                             </div>
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Facultad / Rol</label>
-                            <select id="adminNewRole" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none">
+                            <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Facultad / Rol</label>
+                            <select id="adminNewRole" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none">
                                 <option value="registrador">Registrador (Carga de Vehículos)</option>
                                 <option value="controlador">Controlador (Chequeo y Escáner)</option>
                                 <option value="admin">Administrador Total</option>
                             </select>
                         </div>
-                        <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 px-4 rounded-xl text-xs transition">
+                        <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider transition">
                             <i class="fa-solid fa-plus mr-1"></i> Crear Usuario
                         </button>
                     </form>
 
-                    <!-- Users List -->
-                    <div class="pt-4 border-t border-slate-700 space-y-2">
+                    <div class="pt-4 border-t border-slate-800 space-y-2">
                         <div class="flex items-center justify-between">
                             <h3 class="text-xs font-bold uppercase text-slate-400">Usuarios Activos en el Sistema</h3>
-                            <button onclick="forceSyncNow()" class="text-[11px] text-emerald-400 hover:underline flex items-center gap-1">
+                            <button onclick="forceSyncNow()" class="text-[11px] text-emerald-400 hover:underline flex items-center gap-1 font-semibold">
                                 <i class="fa-solid fa-rotate"></i> Actualizar Nube
                             </button>
                         </div>
@@ -127,11 +447,11 @@
                     </div>
                 </div>
 
-                <!-- PIN & Database Clean Management -->
+                <!-- PIN & Database Maintenance -->
                 <div class="space-y-6">
-                    <!-- Clave de Borrado -->
-                    <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-5 space-y-4">
-                        <div class="border-b border-slate-700 pb-3">
+                    <!-- PIN Change Card -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
+                        <div class="border-b border-slate-800 pb-3">
                             <h2 class="text-lg font-bold text-white flex items-center gap-2">
                                 <i class="fa-solid fa-key text-emerald-400"></i>
                                 Clave de Borrado de 4 Dígitos
@@ -140,31 +460,15 @@
                         </div>
 
                         <form onsubmit="handleUpdatePinSubmit(event)" class="flex gap-3">
-                            <input type="text" id="adminPinInput" maxlength="4" pattern="[A-Za-z0-9]{4}" required placeholder="Ej: 8899" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 font-mono text-center text-lg font-bold uppercase tracking-widest text-emerald-400 focus:outline-none">
-                            <button type="submit" class="bg-slate-700 hover:bg-slate-600 text-white font-semibold px-4 py-2 rounded-xl text-xs transition flex-shrink-0">
+                            <input type="text" id="adminPinInput" maxlength="4" pattern="[A-Za-z0-9]{4}" required placeholder="Ej: 1234" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 font-mono text-center text-xl font-bold uppercase tracking-widest text-emerald-400 focus:outline-none">
+                            <button type="submit" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition border border-slate-700 flex-shrink-0">
                                 Actualizar PIN
                             </button>
                         </form>
                     </div>
 
-                    <!-- Estado Sincronización Nube -->
-                    <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-5 space-y-3">
-                        <div class="flex items-center justify-between">
-                            <h2 class="text-sm font-bold text-white flex items-center gap-2">
-                                <i class="fa-solid fa-cloud text-emerald-400"></i>
-                                Estado de la Nube Multidispositivo
-                            </h2>
-                            <span id="cloudStatusBadge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Activa</span>
-                        </div>
-                        <p class="text-xs text-slate-400">Los usuarios creados y registros se sincronizan automáticamente en tiempo real con todos los celulares conectados.</p>
-                        <button onclick="forceSyncNow()" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow transition flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-rotate"></i>
-                            <span>Forzar Sincronización Inmediata</span>
-                        </button>
-                    </div>
-
-                    <!-- Limpieza Completa de Registros -->
-                    <div class="bg-rose-950/30 border border-rose-500/30 rounded-2xl p-5 space-y-3">
+                    <!-- Reset DB Card -->
+                    <div class="bg-rose-950/20 border border-rose-500/30 rounded-3xl p-6 space-y-3 shadow-xl">
                         <div class="flex items-center gap-2 text-rose-400 font-bold text-base">
                             <i class="fa-solid fa-triangle-exclamation text-lg"></i>
                             <span>Limpiar Todo el Registro</span>
@@ -180,21 +484,45 @@
         </section>
 
     </main>
-<!-- ... existing code ... -->
+
+    <div id="liveAlertModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-slate-900 border-2 border-emerald-500 rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center space-y-4 shadow-2xl animate-glow">
+            <div class="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto text-3xl">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div>
+                <span class="text-xs font-bold text-emerald-400 uppercase tracking-widest block">Ingreso Autorizado</span>
+                <h3 id="alertPatenteText" class="text-3xl font-black font-mono text-white mt-1">---</h3>
+                <p id="alertConductorText" class="text-xs text-slate-300 mt-2">---</p>
+            </div>
+            <button onclick="closeLiveAlert()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-3 px-4 rounded-xl text-xs uppercase tracking-wider transition">
+                Entendido
+            </button>
+        </div>
+    </div>
+
+    <div id="deleteVehicleModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
+            <div class="text-center space-y-1">
+                <h3 class="text-lg font-bold text-white">Eliminar Registro</h3>
+                <p class="text-xs text-slate-400">Ingrese la clave de 4 dígitos proporcionada por el Administrador para confirmar la eliminación.</p>
+            </div>
+            <input type="password" id="deletePinInput" maxlength="4" placeholder="••••" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 font-mono text-center text-2xl font-bold uppercase tracking-widest text-emerald-400 focus:outline-none">
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="closeDeleteModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 px-4 rounded-xl text-xs transition border border-slate-700">
+                    Cancelar
+                </button>
+                <button onclick="confirmDeleteVehicle()" class="bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow">
+                    Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4 sm:px-0"></div>
+
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'estacionamiento-reservado-app';
-        let firebaseConfig = null;
-        
-        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-            try { firebaseConfig = JSON.parse(__firebase_config); } catch (e) { console.error(e); }
-        }
-
-        // Global State Variables
-        let currentUser = null;
+        // Global Application State
         let activeStaffUser = null;
         let systemUsers = [];
         let systemDeletePin = '1234';
@@ -203,12 +531,9 @@
         let vehicleToDeleteId = null;
         let currentTab = 'register';
         let html5QrScanner = null;
-        let knownAccessSet = new Set();
         let lastKnownAccessId = null;
-        let dbConnected = false;
 
         // BULLETPROOF MULTI-DEVICE CLOUD SYNC ENGINE
-        // CORS-enabled JSONBlob multi-device shared cloud storage endpoint
         const CLOUD_SYNC_URL = 'https://jsonblob.com/api/jsonBlob/1332822183389020160';
 
         async function syncCloudStorage(isFastLoginSync = false) {
@@ -228,10 +553,9 @@
                 if (res.ok) {
                     const cloudData = await res.json();
                     
-                    // Merge Users from Cloud
+                    // Merge Users
                     if (cloudData.users && Array.isArray(cloudData.users) && cloudData.users.length > 0) {
                         const mergedUsers = [...cloudData.users];
-                        // Ensure default admin exists
                         if (!mergedUsers.some(u => u.username && u.username.toLowerCase() === 'admin')) {
                             mergedUsers.unshift({
                                 id: 'admin-default',
@@ -261,9 +585,9 @@
                         if (pinInput && document.activeElement !== pinInput) pinInput.value = systemDeletePin;
                     }
 
-                    // Check for Realtime Access Granted Alert across devices
+                    // Real-time Access Granted Alert Trigger
                     if (cloudData.lastAccess && cloudData.lastAccess.id !== lastKnownAccessId) {
-                        if (lastKnownAccessId !== null) { // Skip alert on initial boot
+                        if (lastKnownAccessId !== null) {
                             triggerLiveAccessAlert(cloudData.lastAccess.patente, cloudData.lastAccess.conductor);
                         }
                         lastKnownAccessId = cloudData.lastAccess.id;
@@ -271,12 +595,11 @@
                         lastKnownAccessId = cloudData.lastAccess.id;
                     }
 
-                    setSystemStatus("Nube Sincronizada (Multidispositivo)", "emerald");
+                    setSystemStatus("Nube Sincronizada", "emerald");
                     return true;
                 }
             } catch (e) {
-                console.warn("Cloud sync status:", e.message || e);
-                setSystemStatus("Modo Local / Sincronizando...", "amber");
+                setSystemStatus("Modo Local Activo", "amber");
             }
             return false;
         }
@@ -296,30 +619,21 @@
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-            } catch (e) {
-                console.warn("Cloud push warning:", e);
-            }
+            } catch (e) {}
         }
 
         window.forceSyncNow = async function() {
-            showToast("Sincronizando con la nube...", "info");
+            showToast("Sincronizando datos...", "info");
             const success = await syncCloudStorage(true);
-            if (success) {
-                showToast("¡Datos sincronizados correctamente!", "success");
-            } else {
-                showToast("Sincronización completada (Modo Local Activo)", "info");
-            }
+            if (success) showToast("¡Sincronizado con éxito!", "success");
+            else showToast("Sincronización local completada", "info");
         };
 
-        // LOCAL STORAGE FALLBACK & BOOTSTRAP ENGINE
         function loadLocalData() {
             try {
                 const storedUsers = localStorage.getItem('park_app_users');
-                if (storedUsers) {
-                    systemUsers = JSON.parse(storedUsers);
-                }
+                if (storedUsers) systemUsers = JSON.parse(storedUsers);
                 
-                // Always ensure default admin account is present
                 if (!systemUsers.some(u => u.username && u.username.toLowerCase() === 'admin')) {
                     systemUsers.unshift({
                         id: 'admin-default',
@@ -332,15 +646,11 @@
                 }
 
                 const storedVehicles = localStorage.getItem('park_app_vehicles');
-                if (storedVehicles) {
-                    vehiclesData = JSON.parse(storedVehicles);
-                }
+                if (storedVehicles) vehiclesData = JSON.parse(storedVehicles);
 
                 const storedPin = localStorage.getItem('park_app_delete_pin');
-                if (storedPin) {
-                    systemDeletePin = storedPin;
-                }
-            } catch (e) { console.error("Error loading localStorage:", e); }
+                if (storedPin) systemDeletePin = storedPin;
+            } catch (e) {}
         }
 
         function saveLocalUsers() {
@@ -362,75 +672,11 @@
             pushCloudStorage();
         }
 
-        // Initialize local data first and poll cloud every 2.5 seconds for continuous multi-device sync
         loadLocalData();
         saveLocalPin();
         renderUsersList();
         syncCloudStorage();
         setInterval(syncCloudStorage, 2500);
-
-        // Broadcast Channel for multi-tab sync on same device
-        const broadcast = window.BroadcastChannel ? new BroadcastChannel('park_app_channel') : null;
-        if (broadcast) {
-            broadcast.onmessage = (event) => {
-                if (event.data && event.data.type === 'ACCESS_GRANTED') {
-                    triggerLiveAccessAlert(event.data.patente, event.data.conductor);
-                } else if (event.data && event.data.type === 'DATA_UPDATE') {
-                    loadLocalData();
-                    renderDashboard();
-                    renderUsersList();
-                }
-            };
-        }
-
-        window.addEventListener('storage', () => {
-            loadLocalData();
-            renderDashboard();
-            renderUsersList();
-        });
-
-        // Firebase Optional Cloud Integration
-        let app = null, auth = null, db = null;
-        let vehiculosCollectionRef = null, accesosCollectionRef = null, usuariosCollectionRef = null, configDocRef = null;
-
-        if (firebaseConfig) {
-            try {
-                app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-
-                vehiculosCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'vehiculos');
-                accesosCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'accesos');
-                usuariosCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'usuarios');
-                configDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'config', 'general');
-
-                initAuth();
-            } catch (e) {
-                console.warn("Firebase config error, using Cloud Sync Engine:", e);
-            }
-        }
-
-        async function initAuth() {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (err) {
-                console.warn("Auth warning:", err);
-            }
-        }
-
-        if (auth) {
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    currentUser = user;
-                    dbConnected = true;
-                    setupFirestoreListeners();
-                }
-            });
-        }
 
         function setSystemStatus(text, color) {
             const dot = document.getElementById('syncStatusDot');
@@ -441,44 +687,6 @@
                     ? "w-2 h-2 rounded-full bg-emerald-400 animate-pulse" 
                     : "w-2 h-2 rounded-full bg-amber-400";
             }
-        }
-
-        function setupFirestoreListeners() {
-            if (!currentUser || !db) return;
-
-            onSnapshot(vehiculosCollectionRef, (snapshot) => {
-                const items = [];
-                snapshot.forEach(docSnap => items.push({ id: docSnap.id, ...docSnap.data() }));
-                if (items.length > 0) {
-                    vehiclesData = items;
-                    saveLocalVehicles();
-                }
-            }, (error) => console.warn("Firestore vehicles error:", error));
-
-            onSnapshot(usuariosCollectionRef, (snapshot) => {
-                const users = [];
-                snapshot.forEach(docSnap => users.push({ id: docSnap.id, ...docSnap.data() }));
-                if (users.length > 0) {
-                    if (!users.some(u => u.username === 'admin')) {
-                        users.unshift({
-                            id: 'admin-default',
-                            nombre: 'Administrador Principal',
-                            username: 'admin',
-                            password: 'admin123',
-                            role: 'admin'
-                        });
-                    }
-                    systemUsers = users;
-                    saveLocalUsers();
-                }
-            }, (error) => console.warn("Firestore users error:", error));
-
-            onSnapshot(configDocRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    systemDeletePin = docSnap.data().deletePin || '1234';
-                    saveLocalPin();
-                }
-            }, (error) => console.warn("Firestore config error:", error));
         }
 
         window.handleLoginSubmit = async function(e) {
@@ -494,12 +702,7 @@
                 btnSubmit.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Validando...`;
             }
 
-            // CRITICAL: Pull latest user accounts from Cloud BEFORE validating credentials on Mobile
-            try {
-                await syncCloudStorage(true);
-            } catch (err) {
-                console.warn("Pre-login sync warning:", err);
-            }
+            try { await syncCloudStorage(true); } catch (err) {}
 
             if (btnSubmit) {
                 btnSubmit.disabled = false;
@@ -510,7 +713,6 @@
                 user.username && user.username.trim().toLowerCase() === u && user.password && user.password.trim() === p
             );
 
-            // Fallback default admin
             if (!found && u === 'admin' && p === 'admin123') {
                 found = {
                     id: 'admin-fallback',
@@ -522,7 +724,6 @@
             }
 
             if (found) {
-                // Independent local session: allows UNLIMITED simultaneous logins on multiple smartphones
                 activeStaffUser = found;
                 document.getElementById('viewLogin').classList.add('hidden');
                 
@@ -565,7 +766,6 @@
 
             if (!btnReg || !btnCheck || !btnDash || !btnAdmin) return;
 
-            // Reset visibility
             btnReg.classList.remove('hidden');
             btnCheck.classList.remove('hidden');
             btnDash.classList.remove('hidden');
@@ -584,7 +784,66 @@
             }
         }
 
-        window.handleCreateUserSubmit = async function(e) {
+        window.switchTab = function(tabName) {
+            const role = activeStaffUser ? (activeStaffUser.role || 'admin') : 'admin';
+
+            if (tabName === 'admin' && role !== 'admin') {
+                showToast("No tienes permisos para acceder a Administración", "error");
+                return;
+            }
+            if (tabName === 'checker' && role === 'registrador') {
+                showToast("Los registradores no tienen acceso al módulo de Control", "error");
+                return;
+            }
+            if (tabName === 'register' && role === 'controlador') {
+                showToast("Los controladores no tienen acceso al módulo de Registro", "error");
+                return;
+            }
+
+            currentTab = tabName;
+            
+            const btnReg = document.getElementById('tabRegisterBtn');
+            const btnCheck = document.getElementById('tabCheckerBtn');
+            const btnDash = document.getElementById('tabDashboardBtn');
+            const btnAdmin = document.getElementById('tabAdminBtn');
+
+            const viewReg = document.getElementById('viewRegister');
+            const viewPass = document.getElementById('viewPassResult');
+            const viewCheck = document.getElementById('viewChecker');
+            const viewDash = document.getElementById('viewDashboard');
+            const viewAdmin = document.getElementById('viewAdmin');
+
+            const inactiveStyle = "px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-slate-400 hover:text-white transition-all";
+            const activeStyle = "px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all bg-emerald-500 text-slate-950 font-bold shadow";
+
+            [btnReg, btnCheck, btnDash, btnAdmin].forEach(b => {
+                if (b) {
+                    const isHidden = b.classList.contains('hidden');
+                    b.className = inactiveStyle + (isHidden ? ' hidden' : '');
+                }
+            });
+
+            [viewReg, viewPass, viewCheck, viewDash, viewAdmin].forEach(v => {
+                if (v) v.classList.add('hidden');
+            });
+
+            if (tabName === 'register' && btnReg) {
+                btnReg.className = activeStyle;
+                resetRegistrationForm();
+            } else if (tabName === 'checker' && btnCheck) {
+                btnCheck.className = activeStyle;
+                if (viewCheck) viewCheck.classList.remove('hidden');
+            } else if (tabName === 'dashboard' && btnDash) {
+                btnDash.className = activeStyle;
+                if (viewDash) viewDash.classList.remove('hidden');
+                renderDashboard();
+            } else if (tabName === 'admin' && btnAdmin) {
+                btnAdmin.className = activeStyle;
+                if (viewAdmin) viewAdmin.classList.remove('hidden');
+            }
+        };
+
+        window.handleCreateUserSubmit = function(e) {
             e.preventDefault();
             if (!activeStaffUser || activeStaffUser.role !== 'admin') {
                 showToast("Se requieren permisos de Administrador", "error");
@@ -601,42 +860,18 @@
                 return;
             }
 
-            const newUserObj = {
-                id: 'usr_' + Date.now(),
-                nombre,
-                username,
-                password,
-                role,
-                fechaCreacion: new Date().toISOString()
-            };
-
+            const newUserObj = { id: 'usr_' + Date.now(), nombre, username, password, role, fechaCreacion: new Date().toISOString() };
             systemUsers.push(newUserObj);
-            saveLocalUsers(); // Automatically saves locally & pushes to cloud
+            saveLocalUsers();
 
-            if (dbConnected && usuariosCollectionRef) {
-                try {
-                    await addDoc(usuariosCollectionRef, { nombre, username, password, role, fechaCreacion: newUserObj.fechaCreacion });
-                } catch(err) { console.warn("Firestore user sync warning:", err); }
-            }
-
-            if (broadcast) broadcast.postMessage({ type: 'DATA_UPDATE' });
-            showToast(`Usuario "${username}" creado y disponible en todos los celulares`, "success");
+            showToast(`Usuario "${username}" creado y sincronizado`, "success");
             e.target.reset();
         };
 
-        window.deleteStaffUser = async function(userId) {
+        window.deleteStaffUser = function(userId) {
             if (!activeStaffUser || activeStaffUser.role !== 'admin') return;
-            
             systemUsers = systemUsers.filter(u => u.id !== userId);
             saveLocalUsers();
-
-            if (dbConnected && db) {
-                try {
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'usuarios', userId));
-                } catch (err) { console.warn("Firestore delete user warning:", err); }
-            }
-
-            if (broadcast) broadcast.postMessage({ type: 'DATA_UPDATE' });
             showToast("Usuario eliminado correctamente", "info");
         };
 
@@ -650,7 +885,7 @@
             }
 
             container.innerHTML = systemUsers.map(u => `
-                <div class="flex items-center justify-between bg-slate-900 border border-slate-700/80 p-2.5 rounded-xl text-xs">
+                <div class="flex items-center justify-between bg-slate-950 border border-slate-800 p-2.5 rounded-xl text-xs">
                     <div>
                         <span class="font-bold text-white block">${u.nombre}</span>
                         <span class="text-[10px] text-slate-400">@${u.username} &bull; <strong class="text-emerald-400 uppercase">${u.role}</strong></span>
@@ -659,15 +894,15 @@
                         <button onclick="deleteStaffUser('${u.id}')" class="text-rose-400 hover:text-rose-300 p-1">
                             <i class="fa-solid fa-user-minus"></i>
                         </button>
-                    ` : '<span class="text-[10px] text-slate-500">Principal</span>'}
+                    ` : '<span class="text-[10px] text-slate-500 font-bold">Principal</span>'}
                 </div>
             `).join('');
         }
 
-        window.handleRegisterSubmit = async function(e) {
+        window.handleRegisterSubmit = function(e) {
             e.preventDefault();
             if (vehiclesData.length >= 2000) {
-                showToast("Se ha alcanzado el límite máximo de 2.000 vehículos.", "error");
+                showToast("Límite máximo de 2.000 vehículos alcanzado.", "error");
                 return;
             }
 
@@ -677,79 +912,48 @@
             const celular = document.getElementById('regCelular').value.trim();
             const discRadios = document.getElementsByName('regDisc');
             let esDisc = false;
-            for (const r of discRadios) {
-                if (r.checked && r.value === 'si') esDisc = true;
-            }
+            for (const r of discRadios) { if (r.checked && r.value === 'si') esDisc = true; }
             const discDetalle = esDisc ? (document.getElementById('regDiscDetalle').value.trim() || 'Sí') : 'No';
             const congregacion = document.getElementById('regCongregacion').value.trim();
 
             const exists = vehiclesData.find(v => v.patente === patente);
             if (exists) {
-                showToast(`La patente ${patente} ya está registrada con la clave ${exists.clave3}`, "error");
+                showToast(`La patente ${patente} ya existe con la clave ${exists.clave3}`, "error");
                 return;
             }
 
-            // Generar clave de 3 dígitos GARANTIZADA ÚNICA
             const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
             let clave3 = '';
             let isUnique = false;
             let attempts = 0;
             while (!isUnique && attempts < 1000) {
                 clave3 = '';
-                for (let i = 0; i < 3; i++) {
-                    clave3 += chars.charAt(Math.floor(Math.random() * chars.length));
-                }
-                if (!vehiclesData.some(v => v.clave3 === clave3)) {
-                    isUnique = true;
-                }
+                for (let i = 0; i < 3; i++) { clave3 += chars.charAt(Math.floor(Math.random() * chars.length)); }
+                if (!vehiclesData.some(v => v.clave3 === clave3)) isUnique = true;
                 attempts++;
             }
 
             const vehicleObj = {
                 id: 'veh_' + Date.now(),
                 conductor: `${nombre} ${apellido}`,
-                nombre,
-                apellido,
-                patente,
-                celular,
-                esDiscapacitadoOMayor: esDisc,
-                discDetalle,
-                congregacion,
-                clave3,
-                estado: 'pendiente',
-                fechaRegistro: new Date().toISOString()
+                nombre, apellido, patente, celular,
+                esDiscapacitadoOMayor: esDisc, discDetalle, congregacion,
+                clave3, estado: 'pendiente', fechaRegistro: new Date().toISOString()
             };
-
-            const submitBtn = document.getElementById('submitRegBtn');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Registrando...`;
 
             vehiclesData.unshift(vehicleObj);
             saveLocalVehicles();
-
-            if (dbConnected && vehiculosCollectionRef) {
-                try {
-                    const docRef = await addDoc(vehiculosCollectionRef, vehicleObj);
-                    vehicleObj.id = docRef.id;
-                } catch (err) { console.warn("Firestore save vehicle warning:", err); }
-            }
-
-            if (broadcast) broadcast.postMessage({ type: 'DATA_UPDATE' });
 
             activeSelectedVehicle = vehicleObj;
             renderPassResultView(vehicleObj);
             showToast("Vehículo registrado exitosamente", "success");
 
-            // Limpieza inmediata del formulario
             const form = document.getElementById('vehicleForm');
             if (form) form.reset();
             toggleDiscDetalle(false);
-
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = `<i class="fa-solid fa-key"></i> <span>Registrar y Generar Clave de 3 Dígitos</span>`;
         };
 
-        window.handleUpdatePinSubmit = async function(e) {
+        window.handleUpdatePinSubmit = function(e) {
             e.preventDefault();
             if (!activeStaffUser || activeStaffUser.role !== 'admin') return;
             const newPin = document.getElementById('adminPinInput').value.trim();
@@ -760,11 +964,6 @@
 
             systemDeletePin = newPin;
             saveLocalPin();
-
-            if (dbConnected && configDocRef) {
-                try { await setDoc(configDocRef, { deletePin: newPin }); } catch(err) { console.warn(err); }
-            }
-
             showToast("Clave de borrado actualizada a 4 dígitos", "success");
         };
 
@@ -779,7 +978,7 @@
             document.getElementById('deleteVehicleModal').classList.add('hidden');
         };
 
-        window.confirmDeleteVehicle = async function() {
+        window.confirmDeleteVehicle = function() {
             const pin = document.getElementById('deletePinInput').value.trim();
             if (pin !== systemDeletePin) {
                 showToast("Clave de 4 dígitos incorrecta", "error");
@@ -789,33 +988,16 @@
             if (vehicleToDeleteId) {
                 vehiclesData = vehiclesData.filter(v => v.id !== vehicleToDeleteId);
                 saveLocalVehicles();
-
-                if (dbConnected && db) {
-                    try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'vehiculos', vehicleToDeleteId)); } catch(err) {}
-                }
-
-                if (broadcast) broadcast.postMessage({ type: 'DATA_UPDATE' });
                 showToast("Registro eliminado correctamente", "info");
                 closeDeleteModal();
             }
         };
 
-        window.promptResetAllVehicles = async function() {
+        window.promptResetAllVehicles = function() {
             if (!activeStaffUser || activeStaffUser.role !== 'admin') return;
             if (confirm("¿Está seguro de que desea borrar TODOS los vehículos registrados? Esta acción no se puede deshacer.")) {
                 vehiclesData = [];
                 saveLocalVehicles();
-
-                if (dbConnected && vehiculosCollectionRef) {
-                    try {
-                        const snap = await getDocs(vehiculosCollectionRef);
-                        const promises = [];
-                        snap.forEach(d => promises.push(deleteDoc(d.ref)));
-                        await Promise.all(promises);
-                    } catch(e) { console.warn(e); }
-                }
-
-                if (broadcast) broadcast.postMessage({ type: 'DATA_UPDATE' });
                 showToast("Base de datos de vehículos vaciada por completo", "success");
             }
         };
@@ -825,16 +1007,23 @@
             const autorizados = vehiclesData.filter(v => v.estado === 'autorizado').length;
             const pendientes = total - autorizados;
 
-            document.getElementById('statTotal').innerText = total;
-            document.getElementById('statAutorizados').innerText = autorizados;
-            document.getElementById('statPendientes').innerText = pendientes;
+            const elTotal = document.getElementById('statTotal');
+            const elAut = document.getElementById('statAutorizados');
+            const elPend = document.getElementById('statPendientes');
+
+            if (elTotal) elTotal.innerText = total;
+            if (elAut) elAut.innerText = autorizados;
+            if (elPend) elPend.innerText = pendientes;
 
             filterDashboardTable();
         }
 
         window.filterDashboardTable = function() {
-            const search = (document.getElementById('dashSearchInput').value || '').toLowerCase().trim();
+            const searchInput = document.getElementById('dashSearchInput');
+            const search = searchInput ? (searchInput.value || '').toLowerCase().trim() : '';
             const tbody = document.getElementById('vehiclesTableBody');
+
+            if (!tbody) return;
 
             const filtered = vehiclesData.filter(v => 
                 (v.clave3 && v.clave3.toLowerCase().includes(search)) ||
@@ -873,65 +1062,6 @@
             `).join('');
         };
 
-        window.switchTab = function(tabName) {
-            const role = activeStaffUser ? (activeStaffUser.role || 'admin') : 'admin';
-
-            if (tabName === 'admin' && role !== 'admin') {
-                showToast("No tienes permisos para acceder a Administración", "error");
-                return;
-            }
-            if (tabName === 'checker' && role === 'registrador') {
-                showToast("Los registradores no tienen acceso al módulo de Control", "error");
-                return;
-            }
-            if (tabName === 'register' && role === 'controlador') {
-                showToast("Los controladores no tienen acceso al módulo de Registro", "error");
-                return;
-            }
-
-            currentTab = tabName;
-            
-            const btnReg = document.getElementById('tabRegisterBtn');
-            const btnCheck = document.getElementById('tabCheckerBtn');
-            const btnDash = document.getElementById('tabDashboardBtn');
-            const btnAdmin = document.getElementById('tabAdminBtn');
-
-            const viewReg = document.getElementById('viewRegister');
-            const viewPass = document.getElementById('viewPassResult');
-            const viewCheck = document.getElementById('viewChecker');
-            const viewDash = document.getElementById('viewDashboard');
-            const viewAdmin = document.getElementById('viewAdmin');
-
-            const inactiveStyle = "px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-slate-400 hover:text-white transition-all";
-            const activeStyle = "px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all bg-emerald-500 text-slate-950 font-semibold shadow";
-
-            [btnReg, btnCheck, btnDash, btnAdmin].forEach(b => {
-                if (b) {
-                    const isHidden = b.classList.contains('hidden');
-                    b.className = inactiveStyle + (isHidden ? ' hidden' : '');
-                }
-            });
-
-            [viewReg, viewPass, viewCheck, viewDash, viewAdmin].forEach(v => {
-                if (v) v.classList.add('hidden');
-            });
-
-            if (tabName === 'register' && btnReg) {
-                btnReg.className = activeStyle;
-                resetRegistrationForm();
-            } else if (tabName === 'checker' && btnCheck) {
-                btnCheck.className = activeStyle;
-                if (viewCheck) viewCheck.classList.remove('hidden');
-            } else if (tabName === 'dashboard' && btnDash) {
-                btnDash.className = activeStyle;
-                if (viewDash) viewDash.classList.remove('hidden');
-                renderDashboard();
-            } else if (tabName === 'admin' && btnAdmin) {
-                btnAdmin.className = activeStyle;
-                if (viewAdmin) viewAdmin.classList.remove('hidden');
-            }
-        };
-
         function renderPassResultView(v) {
             document.getElementById('resultCodeDisplay').innerText = v.clave3;
             document.getElementById('resNombreCompleto').innerText = v.conductor;
@@ -949,6 +1079,7 @@
 
         function generateTicketCanvasImage(v) {
             const canvas = document.getElementById('ticketCanvas');
+            if (!canvas) return;
             const ctx = canvas.getContext('2d');
 
             ctx.fillStyle = '#0f172a';
@@ -991,8 +1122,6 @@
             ctx.fillText(v.clave3, 300, 265);
 
             ctx.textAlign = 'left';
-            ctx.fillStyle = '#f8fafc';
-
             let y = 370;
             const drawRow = (label, val, highlight = false) => {
                 ctx.fillStyle = '#94a3b8';
@@ -1041,7 +1170,6 @@
 
             const encodedText = encodeURIComponent(text);
             const cleanPhone = v.celular.replace(/[^0-9]/g, '');
-            
             const waUrl = cleanPhone.length >= 8 
                 ? `https://wa.me/${cleanPhone}?text=${encodedText}`
                 : `https://api.whatsapp.com/send?text=${encodedText}`;
@@ -1075,8 +1203,10 @@
 
         window.toggleDiscDetalle = function(show) {
             const box = document.getElementById('discDetalleBox');
-            if (show) box.classList.remove('hidden');
-            else box.classList.add('hidden');
+            if (box) {
+                if (show) box.classList.remove('hidden');
+                else box.classList.add('hidden');
+            }
         };
 
         window.searchVehicleCode = function() {
@@ -1124,12 +1254,6 @@
             }
         };
 
-        window.clearCheckerSearch = function() {
-            document.getElementById('checkerCodeInput').value = '';
-            document.getElementById('checkerResultBox').classList.add('hidden');
-            document.getElementById('checkerNotFound').classList.add('hidden');
-        };
-
         window.toggleCameraScanner = function() {
             const placeholder = document.getElementById('cameraPlaceholder');
             const btnText = document.getElementById('camBtnText');
@@ -1157,7 +1281,6 @@
                     },
                     () => {}
                 ).catch(err => {
-                    console.error("Camera permissions error:", err);
                     showToast("No se pudo acceder a la cámara", "error");
                     placeholder.classList.remove('hidden');
                     btnText.innerText = "Activar Cámara";
@@ -1165,14 +1288,10 @@
             }
         };
 
-        window.authorizeVehicleAccess = async function() {
+        window.authorizeVehicleAccess = function() {
             if (!activeSelectedVehicle) return;
 
             const v = activeSelectedVehicle;
-            const authBtn = document.getElementById('authorizeAccessBtn');
-            authBtn.disabled = true;
-            authBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Procesando...`;
-
             v.estado = 'autorizado';
             v.fechaAcceso = new Date().toISOString();
             
@@ -1180,22 +1299,8 @@
             saveLocalVehicles();
             pushCloudStorage(accessObj);
 
-            if (dbConnected && db && v.id) {
-                try {
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'vehiculos', v.id);
-                    await updateDoc(docRef, { estado: 'autorizado', fechaAcceso: v.fechaAcceso });
-                    await addDoc(accesosCollectionRef, { patente: v.patente, conductor: v.conductor, clave3: v.clave3, timestamp: v.fechaAcceso });
-                } catch (err) { console.warn(err); }
-            }
-
-            if (broadcast) {
-                broadcast.postMessage({ type: 'ACCESS_GRANTED', patente: v.patente, conductor: v.conductor });
-                broadcast.postMessage({ type: 'DATA_UPDATE' });
-            }
-
             showToast(`Acceso permitido para ${v.patente}`, "success");
             searchVehicleCode();
-            authBtn.disabled = false;
         };
 
         function triggerLiveAccessAlert(patente, conductor) {
@@ -1203,12 +1308,13 @@
             document.getElementById('alertConductorText').innerText = conductor ? `Conductor: ${conductor}` : 'Vehículo autorizado en portería.';
             
             const modal = document.getElementById('liveAlertModal');
-            modal.classList.remove('hidden');
+            if (modal) modal.classList.remove('hidden');
             playAccessChimeSound();
         }
 
         window.closeLiveAlert = function() {
-            document.getElementById('liveAlertModal').classList.add('hidden');
+            const modal = document.getElementById('liveAlertModal');
+            if (modal) modal.classList.add('hidden');
         };
 
         function playAccessChimeSound() {
@@ -1248,8 +1354,9 @@
 
         function showToast(message, type = 'info') {
             const container = document.getElementById('toastContainer');
+            if (!container) return;
+
             const toast = document.createElement('div');
-            
             const bgColor = type === 'success' ? 'bg-emerald-600 text-white' : (type === 'error' ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-100');
             const icon = type === 'success' ? 'fa-circle-check' : (type === 'error' ? 'fa-triangle-exclamation' : 'fa-info-circle');
 
