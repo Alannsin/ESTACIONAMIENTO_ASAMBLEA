@@ -527,44 +527,106 @@
         let systemUsers = [];
         let systemDeletePin = '1234';
         let vehiclesData = [];
+        let deletedVehicleIds = [];
+        let lastClearedAt = 0;
         let activeSelectedVehicle = null;
         let vehicleToDeleteId = null;
         let currentTab = 'register';
         let html5QrScanner = null;
         let lastKnownAccessId = null;
 
-        // BULLETPROOF MULTI-DEVICE CLOUD SYNC ENGINE WITH SMART UNION MERGING
+        // BULLETPROOF MULTI-DEVICE CLOUD SYNC ENGINE WITH SMART DELETION TRACKING
         const CLOUD_SYNC_URL = 'https://jsonblob.com/api/jsonBlob/1332822183389020160';
 
-        function mergeVehiclesList(localList, cloudList) {
-            const vehicleMap = new Map();
-            const getKey = (v) => v.id || v.clave3 || v.patente;
+        function mergeSyncData(cloudData) {
+            if (!cloudData) return false;
+            let changed = false;
 
-            // Load local vehicles first
-            (localList || []).forEach(v => {
-                if (v && getKey(v)) vehicleMap.set(getKey(v), { ...v });
+            // 1. Sync lastClearedAt (Global wipe timestamp)
+            if (cloudData.lastClearedAt && cloudData.lastClearedAt > lastClearedAt) {
+                lastClearedAt = cloudData.lastClearedAt;
+                localStorage.setItem('park_app_cleared_at', lastClearedAt.toString());
+                changed = true;
+            }
+
+            // 2. Sync deletedVehicleIds
+            if (Array.isArray(cloudData.deletedVehicleIds)) {
+                const prevSize = deletedVehicleIds.length;
+                deletedVehicleIds = Array.from(new Set([...deletedVehicleIds, ...cloudData.deletedVehicleIds]));
+                if (deletedVehicleIds.length !== prevSize) {
+                    localStorage.setItem('park_app_deleted_ids', JSON.stringify(deletedVehicleIds));
+                    changed = true;
+                }
+            }
+
+            // 3. Merge Vehicles (Filtering out wiped or deleted items)
+            const filteredLocal = vehiclesData.filter(v => {
+                const regTime = new Date(v.fechaRegistro || 0).getTime();
+                return regTime > lastClearedAt && !deletedVehicleIds.includes(v.id);
             });
 
-            // Merge cloud vehicles without overwriting local additions
-            (cloudList || []).forEach(v => {
-                if (!v || !getKey(v)) return;
-                const key = getKey(v);
-                if (vehicleMap.has(key)) {
-                    const localV = vehicleMap.get(key);
+            const filteredCloud = (cloudData.vehicles || []).filter(v => {
+                const regTime = new Date(v.fechaRegistro || 0).getTime();
+                return regTime > lastClearedAt && !deletedVehicleIds.includes(v.id);
+            });
+
+            const vehicleMap = new Map();
+            filteredLocal.forEach(v => { if (v && v.id) vehicleMap.set(v.id, { ...v }); });
+
+            filteredCloud.forEach(v => {
+                if (!v || !v.id) return;
+                if (vehicleMap.has(v.id)) {
+                    const localV = vehicleMap.get(v.id);
                     const mergedV = { ...localV, ...v };
                     if (localV.estado === 'autorizado' || v.estado === 'autorizado') {
                         mergedV.estado = 'autorizado';
                         mergedV.fechaAcceso = localV.fechaAcceso || v.fechaAcceso || new Date().toISOString();
                     }
-                    vehicleMap.set(key, mergedV);
+                    vehicleMap.set(v.id, mergedV);
                 } else {
-                    vehicleMap.set(key, { ...v });
+                    vehicleMap.set(v.id, { ...v });
                 }
             });
 
-            const mergedArr = Array.from(vehicleMap.values());
-            mergedArr.sort((a, b) => new Date(b.fechaRegistro || 0) - new Date(a.fechaRegistro || 0));
-            return mergedArr;
+            const mergedVehicles = Array.from(vehicleMap.values());
+            mergedVehicles.sort((a, b) => new Date(b.fechaRegistro || 0) - new Date(a.fechaRegistro || 0));
+
+            if (JSON.stringify(mergedVehicles) !== JSON.stringify(vehiclesData)) {
+                vehiclesData = mergedVehicles;
+                localStorage.setItem('park_app_vehicles', JSON.stringify(vehiclesData));
+                renderDashboard();
+                changed = true;
+            }
+
+            // 4. Merge Users
+            const newUsers = mergeUsersList(systemUsers, cloudData.users);
+            if (JSON.stringify(newUsers) !== JSON.stringify(systemUsers)) {
+                systemUsers = newUsers;
+                localStorage.setItem('park_app_users', JSON.stringify(systemUsers));
+                renderUsersList();
+                changed = true;
+            }
+
+            // 5. Merge Delete PIN
+            if (cloudData.deletePin && cloudData.deletePin !== systemDeletePin) {
+                systemDeletePin = cloudData.deletePin;
+                localStorage.setItem('park_app_delete_pin', systemDeletePin);
+                const pinInput = document.getElementById('adminPinInput');
+                if (pinInput && document.activeElement !== pinInput) pinInput.value = systemDeletePin;
+                changed = true;
+            }
+
+            // 6. Real-time Access Granted Alert
+            if (cloudData.lastAccess && cloudData.lastAccess.id !== lastKnownAccessId) {
+                if (lastKnownAccessId !== null) {
+                    triggerLiveAccessAlert(cloudData.lastAccess.patente, cloudData.lastAccess.conductor);
+                }
+                lastKnownAccessId = cloudData.lastAccess.id;
+            } else if (lastKnownAccessId === null && cloudData.lastAccess) {
+                lastKnownAccessId = cloudData.lastAccess.id;
+            }
+
+            return changed;
         }
 
         function mergeUsersList(localUsers, cloudUsers) {
@@ -611,43 +673,7 @@
 
                 if (res.ok) {
                     const cloudData = await res.json();
-                    let needsPushBack = false;
-
-                    // Smart Merge Users
-                    const newUsers = mergeUsersList(systemUsers, cloudData.users);
-                    if (JSON.stringify(newUsers) !== JSON.stringify(systemUsers)) {
-                        systemUsers = newUsers;
-                        localStorage.setItem('park_app_users', JSON.stringify(systemUsers));
-                        renderUsersList();
-                        needsPushBack = true;
-                    }
-
-                    // Smart Merge Vehicles (Union of PC + Mobile)
-                    const newVehicles = mergeVehiclesList(vehiclesData, cloudData.vehicles);
-                    if (JSON.stringify(newVehicles) !== JSON.stringify(vehiclesData)) {
-                        vehiclesData = newVehicles;
-                        localStorage.setItem('park_app_vehicles', JSON.stringify(vehiclesData));
-                        renderDashboard();
-                        needsPushBack = true;
-                    }
-
-                    // Merge PIN
-                    if (cloudData.deletePin && cloudData.deletePin !== systemDeletePin) {
-                        systemDeletePin = cloudData.deletePin;
-                        localStorage.setItem('park_app_delete_pin', systemDeletePin);
-                        const pinInput = document.getElementById('adminPinInput');
-                        if (pinInput && document.activeElement !== pinInput) pinInput.value = systemDeletePin;
-                    }
-
-                    // Real-time Access Granted Alert Trigger
-                    if (cloudData.lastAccess && cloudData.lastAccess.id !== lastKnownAccessId) {
-                        if (lastKnownAccessId !== null) {
-                            triggerLiveAccessAlert(cloudData.lastAccess.patente, cloudData.lastAccess.conductor);
-                        }
-                        lastKnownAccessId = cloudData.lastAccess.id;
-                    } else if (lastKnownAccessId === null && cloudData.lastAccess) {
-                        lastKnownAccessId = cloudData.lastAccess.id;
-                    }
+                    const needsPushBack = mergeSyncData(cloudData);
 
                     setSystemStatus("Nube Sincronizada", "emerald");
 
@@ -668,6 +694,8 @@
                     users: systemUsers,
                     vehicles: vehiclesData,
                     deletePin: systemDeletePin,
+                    deletedVehicleIds: deletedVehicleIds,
+                    lastClearedAt: lastClearedAt,
                     lastAccess: lastAccessObj || (lastKnownAccessId ? { id: lastKnownAccessId } : null),
                     updatedAt: new Date().toISOString()
                 };
@@ -719,6 +747,12 @@
 
                 const storedPin = localStorage.getItem('park_app_delete_pin');
                 if (storedPin) systemDeletePin = storedPin;
+
+                const storedClearedAt = localStorage.getItem('park_app_cleared_at');
+                if (storedClearedAt) lastClearedAt = parseInt(storedClearedAt, 10) || 0;
+
+                const storedDeletedIds = localStorage.getItem('park_app_deleted_ids');
+                if (storedDeletedIds) deletedVehicleIds = JSON.parse(storedDeletedIds);
             } catch (e) {}
         }
 
@@ -1055,6 +1089,10 @@
             }
 
             if (vehicleToDeleteId) {
+                if (!deletedVehicleIds.includes(vehicleToDeleteId)) {
+                    deletedVehicleIds.push(vehicleToDeleteId);
+                    localStorage.setItem('park_app_deleted_ids', JSON.stringify(deletedVehicleIds));
+                }
                 vehiclesData = vehiclesData.filter(v => v.id !== vehicleToDeleteId);
                 saveLocalVehicles();
                 showToast("Registro eliminado correctamente", "info");
@@ -1066,6 +1104,8 @@
             if (!activeStaffUser || activeStaffUser.role !== 'admin') return;
             if (confirm("¿Está seguro de que desea borrar TODOS los vehículos registrados? Esta acción no se puede deshacer.")) {
                 vehiclesData = [];
+                lastClearedAt = Date.now();
+                localStorage.setItem('park_app_cleared_at', lastClearedAt.toString());
                 saveLocalVehicles();
                 showToast("Base de datos de vehículos vaciada por completo", "success");
             }
