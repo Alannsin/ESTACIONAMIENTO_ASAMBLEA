@@ -510,7 +510,6 @@
     <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4 sm:px-0"></div>
 
     <script type="module">
-        /* Standard JavaScript variables and application state */
         let activeStaffUser = null;
         let systemUsers = [];
         let systemDeletePin = '1234';
@@ -658,7 +657,7 @@
 
             try {
                 const controller = new AbortController();
-                const timeoutMs = isFastLoginSync ? 2000 : 3500;
+                const timeoutMs = isFastLoginSync ? 1500 : 3500;
                 const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
                 const res = await fetch(CLOUD_SYNC_URL, { 
@@ -689,14 +688,13 @@
         async function pushCloudStorage(lastAccessObj = null) {
             try {
                 const payload = {
-                    users: systemUsers.filter(u => !deletedUserIds.includes(u.id)),
                     vehicles: vehiclesData,
+                    users: systemUsers,
                     deletePin: systemDeletePin,
+                    lastClearedAt: lastClearedAt,
                     deletedVehicleIds: deletedVehicleIds,
                     deletedUserIds: deletedUserIds,
-                    lastClearedAt: lastClearedAt,
-                    lastAccess: lastAccessObj || (lastKnownAccessId ? { id: lastKnownAccessId } : null),
-                    updatedAt: new Date().toISOString()
+                    lastAccess: lastAccessObj || (lastKnownAccessId ? { id: lastKnownAccessId } : null)
                 };
 
                 let res = await fetch(CLOUD_SYNC_URL, {
@@ -712,8 +710,96 @@
                         body: JSON.stringify(payload)
                     });
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.warn("Error pushing to cloud:", e);
+            }
         }
+
+        window.handleLoginSubmit = async function(e) {
+            if (e) e.preventDefault();
+            
+            const uInput = document.getElementById('loginUsername');
+            const pInput = document.getElementById('loginPassword');
+            if (!uInput || !pInput) return;
+
+            const username = uInput.value.trim().toLowerCase();
+            const password = pInput.value.trim();
+
+            const btn = document.getElementById('btnLoginSubmit');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> <span>Verificando...</span>`;
+            }
+
+            try {
+                // 1. Verificación local inmediata (sin requerir internet)
+                let foundUser = systemUsers.find(u => 
+                    u && u.username && u.username.toLowerCase() === username && u.password === password
+                );
+
+                // 2. Si no se encuentra localmente, intentar sincronización con la nube
+                if (!foundUser) {
+                    try {
+                        await syncCloudStorage(true);
+                        foundUser = systemUsers.find(u => 
+                            u && u.username && u.username.toLowerCase() === username && u.password === password
+                        );
+                    } catch (syncErr) {
+                        console.warn("Sync on login timeout or offline:", syncErr);
+                    }
+                }
+
+                // 3. Fallback de emergencia para el administrador predeterminado
+                if (!foundUser && username === 'admin' && password === 'admin123') {
+                    foundUser = {
+                        id: 'admin-default',
+                        nombre: 'Administrador Principal',
+                        username: 'admin',
+                        password: 'admin123',
+                        role: 'admin'
+                    };
+                }
+
+                if (foundUser) {
+                    activeStaffUser = foundUser;
+                    localStorage.setItem('park_app_active_user', JSON.stringify(foundUser));
+
+                    document.getElementById('userProfileName').innerText = foundUser.nombre;
+                    document.getElementById('userProfileRole').innerText = foundUser.role;
+
+                    document.getElementById('viewLogin').classList.add('hidden');
+                    document.getElementById('userProfileBar').classList.remove('hidden');
+                    document.getElementById('mainNav').classList.remove('hidden');
+
+                    applyRolePermissions(foundUser.role);
+                    showToast(`Bienvenido/a ${foundUser.nombre}`, "success");
+                } else {
+                    showToast("Usuario o contraseña incorrectos", "error");
+                }
+            } catch (err) {
+                console.error("Login error:", err);
+                showToast("Error al procesar el ingreso. Reintente.", "error");
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> <span>Iniciar Sesión</span>`;
+                }
+            }
+        };
+
+        window.logoutUser = function() {
+            activeStaffUser = null;
+            localStorage.removeItem('park_app_active_user');
+
+            document.getElementById('viewLogin').classList.remove('hidden');
+            document.getElementById('userProfileBar').classList.add('hidden');
+            document.getElementById('mainNav').classList.add('hidden');
+
+            const loginForm = document.querySelector('#viewLogin form');
+            if (loginForm) loginForm.reset();
+
+            showToast("Sesión cerrada correctamente", "info");
+        };
 
         window.forceSyncNow = async function() {
             showToast("Sincronizando con la nube...", "info");
@@ -730,7 +816,7 @@
                 const storedUsers = localStorage.getItem('park_app_users');
                 if (storedUsers) systemUsers = JSON.parse(storedUsers);
                 
-                if (!systemUsers.some(u => u.username && u.username.toLowerCase() === 'admin')) {
+                if (!systemUsers.some(u => u && u.username && u.username.toLowerCase() === 'admin')) {
                     systemUsers.unshift({
                         id: 'admin-default',
                         nombre: 'Administrador Principal',
@@ -772,7 +858,9 @@
                         }, 50);
                     }
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.error("Error loading local data:", e);
+            }
         }
 
         function saveLocalUsers() {
@@ -851,7 +939,6 @@
                 if (el) el.classList.add('hidden');
             });
 
-            // Update active styles without removing the 'hidden' utility class from restricted tabs
             const navBtns = [
                 { id: 'tabRegisterBtn', key: 'register' },
                 { id: 'tabCheckerBtn', key: 'checker' },
@@ -898,7 +985,7 @@
             const password = document.getElementById('adminNewPassword').value.trim();
             const role = document.getElementById('adminNewRole').value;
 
-            if (systemUsers.some(u => u.username && u.username.toLowerCase() === username)) {
+            if (systemUsers.some(u => u && u.username && u.username.toLowerCase() === username)) {
                 showToast("El nombre de usuario ya existe", "error");
                 return;
             }
