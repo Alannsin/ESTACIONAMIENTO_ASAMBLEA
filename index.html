@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Estacionamiento Reservado</title>
+    <title>Estacionamiento Reservado - Tiempo Real</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome 6 CDN -->
@@ -32,7 +32,7 @@
 
     <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-30 px-4 py-3">
         <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
-            <!-- Brand Logo -->
+            <!-- Brand Logo & Room ID -->
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center font-black text-xl shadow-lg shadow-emerald-500/20">
                     <i class="fa-solid fa-square-parking"></i>
@@ -40,8 +40,9 @@
                 <div>
                     <h1 class="font-extrabold text-base sm:text-lg tracking-tight text-white leading-none">Estacionamiento Reservado</h1>
                     <div class="flex items-center gap-2 mt-1">
-                        <span id="syncStatusDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span id="syncStatusText" class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Modo Local / Nube</span>
+                        <span id="syncStatusDot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span id="syncStatusText" class="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Conectado en Vivo</span>
+                        <span id="roomTagDisplay" class="text-[9px] bg-slate-800 px-1.5 py-0.5 rounded text-emerald-400 font-mono">Sala: default</span>
                     </div>
                 </div>
             </div>
@@ -66,9 +67,9 @@
                 </button>
             </nav>
 
-            <!-- User Profile & Sync Action -->
+            <!-- User Profile & Manual Sync -->
             <div id="userProfileBar" class="hidden flex items-center gap-3">
-                <button onclick="forceSyncNow()" title="Sincronizar Datos" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600/80 text-emerald-400 hover:text-white text-xs font-semibold flex items-center gap-1 transition border border-slate-700">
+                <button onclick="requestFullStateSync()" title="Forzar Sincronización" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600/80 text-emerald-400 hover:text-white text-xs font-semibold flex items-center gap-1 transition border border-slate-700">
                     <i class="fa-solid fa-rotate"></i>
                     <span class="hidden sm:inline">Sincronizar</span>
                 </button>
@@ -84,23 +85,29 @@
     </header>
 
     <div id="viewLogin" class="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-4 overflow-y-auto">
-        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6 my-auto">
-            <div class="text-center space-y-3">
-                <div class="w-16 h-16 rounded-2xl bg-emerald-500 text-slate-950 flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/20">
-                    <i class="fa-solid fa-square-parking text-3xl font-black"></i>
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-5 my-auto">
+            <div class="text-center space-y-2">
+                <div class="w-14 h-14 rounded-2xl bg-emerald-500 text-slate-950 flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/20">
+                    <i class="fa-solid fa-square-parking text-2xl font-black"></i>
                 </div>
                 <h2 class="text-2xl font-black text-white">Acceso al Sistema</h2>
-                <p class="text-xs text-slate-400">Ingrese las credenciales otorgadas por el administrador.</p>
+                <p class="text-xs text-slate-400">Ingrese con su usuario asignado para continuar.</p>
             </div>
 
             <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Usuario</label>
-                    <input type="text" id="loginUsername" required placeholder="Ej: operador1" autocapitalize="none" autocomplete="off" autocorrect="off" spellcheck="false" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 text-sm font-medium transition">
+                    <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Usuario</label>
+                    <input type="text" id="loginUsername" required placeholder="Ej: registrador o admin" autocapitalize="none" autocomplete="off" autocorrect="off" spellcheck="false" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 text-sm font-medium transition">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Contraseña</label>
+                    <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Contraseña</label>
                     <input type="password" id="loginPassword" required placeholder="••••••••" autocapitalize="none" autocomplete="off" autocorrect="off" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 text-sm font-medium transition">
+                </div>
+
+                <div class="pt-1">
+                    <label class="block text-[10px] font-bold text-amber-400 uppercase tracking-wider mb-1">Código de Sala de Evento</label>
+                    <input type="text" id="loginRoomCode" value="asamblea2026" required placeholder="Ej: asamblea2026" autocapitalize="none" autocomplete="off" class="w-full bg-slate-950 border border-amber-500/40 rounded-xl px-3.5 py-2 text-amber-200 font-mono text-xs focus:outline-none focus:border-amber-400">
+                    <span class="text-[10px] text-slate-500 block mt-1">Todos los celulares y la PC deben usar el mismo código de sala.</span>
                 </div>
                 
                 <button type="submit" id="btnLoginSubmit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-3.5 px-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm uppercase tracking-wider">
@@ -109,14 +116,10 @@
                 </button>
             </form>
 
-            <div class="pt-4 border-t border-slate-800/80 space-y-2 text-center">
-                <button onclick="forceSyncNow()" class="w-full bg-slate-800 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 font-bold py-2.5 px-3 rounded-xl text-xs border border-slate-700/80 transition flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-rotate"></i>
-                    <span>Sincronizar Usuarios desde la Nube</span>
-                </button>
-                <button onclick="openQrPairingScanner()" class="w-full bg-slate-800/60 hover:bg-slate-800 text-amber-400 font-bold py-2.5 px-3 rounded-xl text-xs border border-amber-500/30 transition flex items-center justify-center gap-2">
+            <div class="pt-3 border-t border-slate-800/80 space-y-2 text-center">
+                <button type="button" onclick="openQrPairingScanner()" class="w-full bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold py-2.5 px-3 rounded-xl text-xs border border-amber-500/30 transition flex items-center justify-center gap-2">
                     <i class="fa-solid fa-qrcode"></i>
-                    <span>Vinculación Directa por QR (Escanear PC)</span>
+                    <span>Escanear QR de Vinculación desde la PC</span>
                 </button>
             </div>
         </div>
@@ -442,8 +445,8 @@
                     <div class="pt-4 border-t border-slate-800 space-y-2">
                         <div class="flex items-center justify-between">
                             <h3 class="text-xs font-bold uppercase text-slate-400">Usuarios Activos en el Sistema</h3>
-                            <button onclick="forceSyncNow()" class="text-[11px] text-emerald-400 hover:underline flex items-center gap-1 font-semibold">
-                                <i class="fa-solid fa-rotate"></i> Actualizar Nube
+                            <button onclick="requestFullStateSync()" class="text-[11px] text-emerald-400 hover:underline flex items-center gap-1 font-semibold">
+                                <i class="fa-solid fa-rotate"></i> Actualizar
                             </button>
                         </div>
                         <div id="usersListContainer" class="space-y-2 max-h-48 overflow-y-auto pr-1">
@@ -460,7 +463,7 @@
                                     <i class="fa-solid fa-qrcode"></i>
                                     Vinculación Directa por QR
                                 </h2>
-                                <p class="text-xs text-slate-400">Si la red 4G/5G del celular bloquea la nube, escanee este QR desde el teléfono.</p>
+                                <p class="text-xs text-slate-400">Escanear este código desde el celular vinculará inmediatamente la sala y usuarios.</p>
                             </div>
                             <button onclick="generatePairingQrCode()" class="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold px-3 py-1.5 rounded-xl text-xs transition border border-amber-500/40">
                                 Generar QR
@@ -469,7 +472,7 @@
                         
                         <div id="pairingQrDisplay" class="hidden flex flex-col items-center justify-center p-4 bg-white rounded-2xl mx-auto max-w-[220px]">
                             <div id="qrCodeCanvas"></div>
-                            <span class="text-[10px] text-slate-800 font-extrabold mt-2 text-center uppercase tracking-wider">Escanear desde Pantalla de Acceso</span>
+                            <span class="text-[10px] text-slate-800 font-extrabold mt-2 text-center uppercase tracking-wider">Escanear desde Pantalla del Celular</span>
                         </div>
                     </div>
 
@@ -507,6 +510,7 @@
 
     </main>
 
+    <!-- Live Access Modal -->
     <div id="liveAlertModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
         <div class="bg-slate-900 border-2 border-emerald-500 rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center space-y-4 shadow-2xl animate-glow">
             <div class="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto text-3xl">
@@ -523,6 +527,7 @@
         </div>
     </div>
 
+    <!-- Delete Vehicle Modal -->
     <div id="deleteVehicleModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
             <div class="text-center space-y-1">
@@ -558,366 +563,225 @@
         </div>
     </div>
 
+    <!-- Toast Notifications Container -->
     <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4 sm:px-0"></div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <script>
+        // Default Cuentas predeterminadas de fábrica
+        const DEFAULT_USERS = [
+            { id: 'admin-default', nombre: 'Administrador Principal', username: 'admin', password: 'admin123', role: 'admin' },
+            { id: 'usr-reg-default', nombre: 'Operador Registrador', username: 'registrador', password: 'registrador123', role: 'registrador' },
+            { id: 'usr-chk-default', nombre: 'Operador Controlador', username: 'controlador', password: 'controlador123', role: 'controlador' }
+        ];
 
         let activeStaffUser = null;
         let systemUsers = [];
         let systemDeletePin = '1234';
         let vehiclesData = [];
-        let deletedVehicleIds = [];
-        let deletedUserIds = [];
-        let lastClearedAt = 0;
         let activeSelectedVehicle = null;
         let vehicleToDeleteId = null;
         let currentTab = 'register';
         let html5QrScanner = null;
         let pairingScanner = null;
-        let lastKnownAccessId = null;
-        let lastMutationTime = 0;
+        let eventSource = null;
+        let currentRoomCode = 'asamblea2026';
+        let myDeviceId = 'dev_' + Math.random().toString(36).substr(2, 6);
 
-        // Firebase Fallback Setup
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'estacionamiento-asamblea-app';
-        let db = null;
-        let auth = null;
-        let firebaseActive = false;
+        function getSyncTopicUrl(roomCode) {
+            const cleanRoom = (roomCode || 'asamblea2026').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+            return `https://ntfy.sh/park_sync_${cleanRoom}`;
+        }
 
-        if (typeof __firebase_config !== 'undefined') {
+        function initRealtimeSyncEngine(roomCode) {
+            currentRoomCode = (roomCode || 'asamblea2026').trim().toLowerCase();
+            const tag = document.getElementById('roomTagDisplay');
+            if (tag) tag.innerText = 'Sala: ' + currentRoomCode;
+
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+
+            const topicUrl = getSyncTopicUrl(currentRoomCode) + '/json';
+            
             try {
-                const firebaseConfig = JSON.parse(__firebase_config);
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                firebaseActive = true;
-            } catch (e) {
-                console.warn("Firebase initialization warning:", e);
-            }
-        }
+                eventSource = new EventSource(topicUrl);
+                
+                eventSource.onopen = function() {
+                    setSystemStatus("Conectado en Vivo", "emerald");
+                };
 
-        // Multi-provider REST endpoints
-        const PRIMARY_CLOUD_URL = 'https://jsonblob.com/api/jsonBlob/1332822183389020160';
-
-        function mergeUsersList(localUsers, cloudUsers) {
-            const userMap = new Map();
-            userMap.set('admin', {
-                id: 'admin-default',
-                nombre: 'Administrador Principal',
-                username: 'admin',
-                password: 'admin123',
-                role: 'admin'
-            });
-
-            (localUsers || []).forEach(u => {
-                if (u && u.username && !deletedUserIds.includes(u.id)) {
-                    userMap.set(u.username.toLowerCase(), { ...u });
-                }
-            });
-
-            (cloudUsers || []).forEach(u => {
-                if (u && u.username && !deletedUserIds.includes(u.id)) {
-                    const uname = u.username.toLowerCase();
-                    if (userMap.has(uname)) {
-                        userMap.set(uname, { ...userMap.get(uname), ...u });
-                    } else {
-                        userMap.set(uname, { ...u });
+                eventSource.onmessage = function(e) {
+                    try {
+                        const parsed = JSON.parse(e.data);
+                        if (parsed.event === 'message' && parsed.message) {
+                            const payload = JSON.parse(parsed.message);
+                            if (payload && payload.senderId !== myDeviceId) {
+                                handleIncomingRemoteEvent(payload);
+                            }
+                        }
+                    } catch (err) {
+                        console.warn("Event parse notice:", err);
                     }
-                }
-            });
+                };
 
-            return Array.from(userMap.values());
-        }
+                eventSource.onerror = function(e) {
+                    setSystemStatus("Reconectando...", "amber");
+                };
 
-        function mergeSyncData(cloudData) {
-            if (!cloudData) return false;
-            let changed = false;
+                // Request full snapshot from other devices online
+                setTimeout(() => {
+                    broadcastSyncMessage('REQUEST_FULL_STATE', {});
+                }, 500);
 
-            if (cloudData.lastClearedAt && cloudData.lastClearedAt > lastClearedAt) {
-                lastClearedAt = cloudData.lastClearedAt;
-                localStorage.setItem('park_app_cleared_at', lastClearedAt.toString());
-                changed = true;
-            }
-
-            if (Array.isArray(cloudData.deletedVehicleIds)) {
-                const prevSize = deletedVehicleIds.length;
-                deletedVehicleIds = Array.from(new Set([...deletedVehicleIds, ...cloudData.deletedVehicleIds]));
-                if (deletedVehicleIds.length !== prevSize) {
-                    localStorage.setItem('park_app_deleted_ids', JSON.stringify(deletedVehicleIds));
-                    changed = true;
-                }
-            }
-
-            if (Array.isArray(cloudData.deletedUserIds)) {
-                const prevSize = deletedUserIds.length;
-                deletedUserIds = Array.from(new Set([...deletedUserIds, ...cloudData.deletedUserIds]));
-                if (deletedUserIds.length !== prevSize) {
-                    localStorage.setItem('park_app_deleted_user_ids', JSON.stringify(deletedUserIds));
-                    changed = true;
-                }
-            }
-
-            const filteredLocal = vehiclesData.filter(v => {
-                const regTime = new Date(v.fechaRegistro || 0).getTime();
-                return regTime > lastClearedAt && !deletedVehicleIds.includes(v.id);
-            });
-
-            const filteredCloud = (cloudData.vehicles || []).filter(v => {
-                const regTime = new Date(v.fechaRegistro || 0).getTime();
-                return regTime > lastClearedAt && !deletedVehicleIds.includes(v.id);
-            });
-
-            const vehicleMap = new Map();
-            filteredLocal.forEach(v => { if (v && v.id) vehicleMap.set(v.id, { ...v }); });
-
-            filteredCloud.forEach(v => {
-                if (!v || !v.id) return;
-                if (vehicleMap.has(v.id)) {
-                    const localV = vehicleMap.get(v.id);
-                    const mergedV = { ...localV, ...v };
-                    if (localV.estado === 'autorizado' || v.estado === 'autorizado') {
-                        mergedV.estado = 'autorizado';
-                        mergedV.fechaAcceso = localV.fechaAcceso || v.fechaAcceso || new Date().toISOString();
-                    }
-                    vehicleMap.set(v.id, mergedV);
-                } else {
-                    vehicleMap.set(v.id, { ...v });
-                }
-            });
-
-            const mergedVehicles = Array.from(vehicleMap.values());
-            mergedVehicles.sort((a, b) => new Date(b.fechaRegistro || 0) - new Date(a.fechaRegistro || 0));
-
-            if (JSON.stringify(mergedVehicles) !== JSON.stringify(vehiclesData)) {
-                vehiclesData = mergedVehicles;
-                localStorage.setItem('park_app_vehicles', JSON.stringify(vehiclesData));
-                renderDashboard();
-                changed = true;
-            }
-
-            const newUsers = mergeUsersList(systemUsers, cloudData.users);
-            if (JSON.stringify(newUsers) !== JSON.stringify(systemUsers)) {
-                systemUsers = newUsers;
-                localStorage.setItem('park_app_users', JSON.stringify(systemUsers));
-                renderUsersList();
-                changed = true;
-            }
-
-            if (cloudData.deletePin && cloudData.deletePin !== systemDeletePin) {
-                systemDeletePin = cloudData.deletePin;
-                localStorage.setItem('park_app_delete_pin', systemDeletePin);
-                const pinInput = document.getElementById('adminPinInput');
-                if (pinInput && document.activeElement !== pinInput) pinInput.value = systemDeletePin;
-                changed = true;
-            }
-
-            if (cloudData.lastAccess && cloudData.lastAccess.id !== lastKnownAccessId) {
-                if (lastKnownAccessId !== null) {
-                    triggerLiveAccessAlert(cloudData.lastAccess.patente, cloudData.lastAccess.conductor);
-                }
-                lastKnownAccessId = cloudData.lastAccess.id;
-            } else if (lastKnownAccessId === null && cloudData.lastAccess) {
-                lastKnownAccessId = cloudData.lastAccess.id;
-            }
-
-            return changed;
-        }
-
-        async function syncCloudStorage(isFastLoginSync = false) {
-            if (Date.now() - lastMutationTime < 3000 && !isFastLoginSync) {
-                return false;
-            }
-
-            try {
-                const controller = new AbortController();
-                const timeoutMs = isFastLoginSync ? 1500 : 3500;
-                const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-                const res = await fetch(PRIMARY_CLOUD_URL, { 
-                    method: 'GET',
-                    headers: { 'Accept': 'application/json', 'Cache-Control': 'no-cache' },
-                    cache: 'no-store',
-                    signal: controller.signal
-                });
-                clearTimeout(timeoutId);
-
-                if (res.ok) {
-                    const cloudData = await res.json();
-                    const needsPushBack = mergeSyncData(cloudData);
-
-                    setSystemStatus("En Línea / Sincronizado", "emerald");
-
-                    if (needsPushBack) {
-                        await pushCloudStorage();
-                    }
-                    return true;
-                }
-            } catch (e) {
+            } catch (err) {
                 setSystemStatus("Modo Local", "amber");
             }
-            return false;
         }
 
-        async function pushCloudStorage(lastAccessObj = null) {
+        async function broadcastSyncMessage(eventType, payloadData) {
+            const cleanRoom = (currentRoomCode || 'asamblea2026').trim().toLowerCase();
+            const topicUrl = getSyncTopicUrl(cleanRoom);
+
             const payload = {
-                vehicles: vehiclesData,
-                users: systemUsers,
-                deletePin: systemDeletePin,
-                lastClearedAt: lastClearedAt,
-                deletedVehicleIds: deletedVehicleIds,
-                deletedUserIds: deletedUserIds,
-                lastAccess: lastAccessObj || (lastKnownAccessId ? { id: lastKnownAccessId } : null)
+                senderId: myDeviceId,
+                type: eventType,
+                timestamp: Date.now(),
+                data: payloadData
             };
 
-            // 1. Firebase Firestore sync if available
-            if (firebaseActive && db && auth) {
-                try {
-                    if (!auth.currentUser) {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await signInWithCustomToken(auth, __initial_auth_token);
-                        } else {
-                            await signInAnonymously(auth);
-                        }
-                    }
-                    if (auth.currentUser) {
-                        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'syncData', 'mainState');
-                        await setDoc(docRef, payload, { merge: true });
-                    }
-                } catch (fbErr) {
-                    console.warn("Firestore save warning:", fbErr);
-                }
-            }
-
-            // 2. REST Endpoint Sync
             try {
-                let res = await fetch(PRIMARY_CLOUD_URL, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                    body: JSON.stringify(payload)
+                await fetch(topicUrl, {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                    headers: { 'Content-Type': 'text/plain' }
                 });
-
-                if (!res.ok && res.status === 404) {
-                    await fetch('https://jsonblob.com/api/jsonBlob', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                }
             } catch (e) {
-                console.warn("Error pushing to cloud REST:", e);
+                console.warn("Broadcast notice:", e);
             }
         }
 
-        window.handleLoginSubmit = async function(e) {
-            if (e) e.preventDefault();
-            
-            const uInput = document.getElementById('loginUsername');
-            const pInput = document.getElementById('loginPassword');
-            if (!uInput || !pInput) return;
+        function handleIncomingRemoteEvent(msg) {
+            if (!msg || !msg.type) return;
 
-            const username = uInput.value.trim().toLowerCase();
-            const password = pInput.value.trim();
+            const type = msg.type;
+            const data = msg.data;
 
-            const btn = document.getElementById('btnLoginSubmit');
-            if (btn) {
-                btn.disabled = true;
-                btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> <span>Verificando...</span>`;
-            }
-
-            try {
-                let foundUser = systemUsers.find(u => 
-                    u && u.username && u.username.toLowerCase() === username && u.password === password
-                );
-
-                if (!foundUser) {
-                    try {
-                        await syncCloudStorage(true);
-                        foundUser = systemUsers.find(u => 
-                            u && u.username && u.username.toLowerCase() === username && u.password === password
-                        );
-                    } catch (syncErr) {
-                        console.warn("Sync on login timeout or offline:", syncErr);
+            if (type === 'VEHICLE_ADDED') {
+                if (data && data.id && !vehiclesData.some(v => v.id === data.id)) {
+                    vehiclesData.unshift(data);
+                    saveVehiclesToLocalOnly();
+                    renderDashboard();
+                }
+            } else if (type === 'VEHICLE_AUTHORIZED') {
+                if (data && data.id) {
+                    const match = vehiclesData.find(v => v.id === data.id);
+                    if (match) {
+                        match.estado = 'autorizado';
+                        match.fechaAcceso = data.fechaAcceso || new Date().toISOString();
+                        saveVehiclesToLocalOnly();
+                        renderDashboard();
+                    }
+                    triggerLiveAccessAlert(data.patente, data.conductor);
+                }
+            } else if (type === 'VEHICLE_DELETED') {
+                if (data && data.id) {
+                    vehiclesData = vehiclesData.filter(v => v.id !== data.id);
+                    saveVehiclesToLocalOnly();
+                    renderDashboard();
+                }
+            } else if (type === 'ALL_VEHICLES_CLEARED') {
+                vehiclesData = [];
+                saveVehiclesToLocalOnly();
+                renderDashboard();
+                showToast("El Administrador vació el registro de vehículos.", "info");
+            } else if (type === 'USER_CREATED') {
+                if (data && data.username && !systemUsers.some(u => u.username.toLowerCase() === data.username.toLowerCase())) {
+                    systemUsers.push(data);
+                    saveUsersToLocalOnly();
+                    renderUsersList();
+                }
+            } else if (type === 'USER_DELETED') {
+                if (data && data.id) {
+                    systemUsers = systemUsers.filter(u => u.id !== data.id);
+                    saveUsersToLocalOnly();
+                    renderUsersList();
+                }
+            } else if (type === 'PIN_UPDATED') {
+                if (data && data.pin) {
+                    systemDeletePin = data.pin;
+                    localStorage.setItem('park_app_delete_pin', systemDeletePin);
+                    const pInp = document.getElementById('adminPinInput');
+                    if (pInp) pInp.value = systemDeletePin;
+                }
+            } else if (type === 'REQUEST_FULL_STATE') {
+                broadcastSyncMessage('RESPONSE_FULL_STATE', {
+                    vehicles: vehiclesData,
+                    users: systemUsers,
+                    deletePin: systemDeletePin
+                });
+            } else if (type === 'RESPONSE_FULL_STATE') {
+                if (data) {
+                    if (Array.isArray(data.vehicles) && data.vehicles.length > 0) {
+                        const map = new Map();
+                        vehiclesData.forEach(v => map.set(v.id, v));
+                        data.vehicles.forEach(v => {
+                            if (!map.has(v.id)) map.set(v.id, v);
+                            else {
+                                const curr = map.get(v.id);
+                                if (v.estado === 'autorizado') curr.estado = 'autorizado';
+                            }
+                        });
+                        vehiclesData = Array.from(map.values());
+                        vehiclesData.sort((a, b) => new Date(b.fechaRegistro || 0) - new Date(a.fechaRegistro || 0));
+                        saveVehiclesToLocalOnly();
+                        renderDashboard();
+                    }
+                    if (Array.isArray(data.users) && data.users.length > 0) {
+                        const uMap = new Map();
+                        systemUsers.forEach(u => uMap.set(u.username.toLowerCase(), u));
+                        data.users.forEach(u => uMap.set(u.username.toLowerCase(), u));
+                        systemUsers = Array.from(uMap.values());
+                        saveUsersToLocalOnly();
+                        renderUsersList();
+                    }
+                    if (data.deletePin) {
+                        systemDeletePin = data.deletePin;
+                        localStorage.setItem('park_app_delete_pin', systemDeletePin);
+                        const pInp = document.getElementById('adminPinInput');
+                        if (pInp) pInp.value = systemDeletePin;
                     }
                 }
-
-                if (!foundUser && username === 'admin' && password === 'admin123') {
-                    foundUser = {
-                        id: 'admin-default',
-                        nombre: 'Administrador Principal',
-                        username: 'admin',
-                        password: 'admin123',
-                        role: 'admin'
-                    };
-                }
-
-                if (foundUser) {
-                    activeStaffUser = foundUser;
-                    localStorage.setItem('park_app_active_user', JSON.stringify(foundUser));
-
-                    document.getElementById('userProfileName').innerText = foundUser.nombre;
-                    document.getElementById('userProfileRole').innerText = foundUser.role;
-
-                    document.getElementById('viewLogin').classList.add('hidden');
-                    document.getElementById('userProfileBar').classList.remove('hidden');
-                    document.getElementById('mainNav').classList.remove('hidden');
-
-                    applyRolePermissions(foundUser.role);
-                    showToast(`Bienvenido/a ${foundUser.nombre}`, "success");
-                } else {
-                    showToast("Usuario o contraseña incorrectos", "error");
-                }
-            } catch (err) {
-                console.error("Login error:", err);
-                showToast("Error al procesar el ingreso. Reintente.", "error");
-            } finally {
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> <span>Iniciar Sesión</span>`;
-                }
             }
-        };
+        }
 
-        window.logoutUser = function() {
-            activeStaffUser = null;
-            localStorage.removeItem('park_app_active_user');
+        function requestFullStateSync() {
+            showToast("Sincronizando datos en tiempo real...", "info");
+            broadcastSyncMessage('REQUEST_FULL_STATE', {});
+        }
 
-            document.getElementById('viewLogin').classList.remove('hidden');
-            document.getElementById('userProfileBar').classList.add('hidden');
-            document.getElementById('mainNav').classList.add('hidden');
-
-            const loginForm = document.querySelector('#viewLogin form');
-            if (loginForm) loginForm.reset();
-
-            showToast("Sesión cerrada correctamente", "info");
-        };
-
-        window.forceSyncNow = async function() {
-            showToast("Sincronizando con la nube...", "info");
-            const success = await syncCloudStorage(true);
-            if (success) {
-                showToast(`¡Sincronizado! ${vehiclesData.length} vehículo(s) y ${systemUsers.length} usuario(s).`, "success");
-            } else {
-                showToast("Sincronización completada con datos guardados", "info");
+        function setSystemStatus(text, color) {
+            const dot = document.getElementById('syncStatusDot');
+            const label = document.getElementById('syncStatusText');
+            if (dot && label) {
+                label.innerText = text;
+                dot.className = color === 'emerald' ? 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse' : 'w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse';
             }
-        };
+        }
 
         function loadLocalData() {
             try {
                 const storedUsers = localStorage.getItem('park_app_users');
-                if (storedUsers) systemUsers = JSON.parse(storedUsers);
-                
-                if (!systemUsers.some(u => u && u.username && u.username.toLowerCase() === 'admin')) {
-                    systemUsers.unshift({
-                        id: 'admin-default',
-                        nombre: 'Administrador Principal',
-                        username: 'admin',
-                        password: 'admin123',
-                        role: 'admin',
-                        fechaCreacion: new Date().toISOString()
-                    });
+                if (storedUsers) {
+                    systemUsers = JSON.parse(storedUsers);
                 }
+                
+                // Asegurar cuentas por defecto
+                DEFAULT_USERS.forEach(defU => {
+                    if (!systemUsers.some(u => u && u.username && u.username.toLowerCase() === defU.username.toLowerCase())) {
+                        systemUsers.unshift(defU);
+                    }
+                });
 
                 const storedVehicles = localStorage.getItem('park_app_vehicles');
                 if (storedVehicles) vehiclesData = JSON.parse(storedVehicles);
@@ -925,15 +789,23 @@
                 const storedPin = localStorage.getItem('park_app_delete_pin');
                 if (storedPin) systemDeletePin = storedPin;
 
-                const storedClearedAt = localStorage.getItem('park_app_cleared_at');
-                if (storedClearedAt) lastClearedAt = parseInt(storedClearedAt, 10) || 0;
+                const storedRoom = localStorage.getItem('park_app_room_code');
+                if (storedRoom) {
+                    currentRoomCode = storedRoom;
+                    const rInp = document.getElementById('loginRoomCode');
+                    if (rInp) rInp.value = currentRoomCode;
+                }
 
-                const storedDeletedIds = localStorage.getItem('park_app_deleted_ids');
-                if (storedDeletedIds) deletedVehicleIds = JSON.parse(storedDeletedIds);
+                // Check URL Hash for direct pairing
+                if (window.location.hash && window.location.hash.includes('sala=')) {
+                    const match = window.location.hash.match(/sala=([a-zA-Z0-9]+)/);
+                    if (match && match[1]) {
+                        currentRoomCode = match[1].toLowerCase();
+                        localStorage.setItem('park_app_room_code', currentRoomCode);
+                    }
+                }
 
-                const storedDeletedUserIds = localStorage.getItem('park_app_deleted_user_ids');
-                if (storedDeletedUserIds) deletedUserIds = JSON.parse(storedDeletedUserIds);
-
+                // Restaurar sesión iniciada
                 const savedSession = localStorage.getItem('park_app_active_user');
                 if (savedSession) {
                     const sessionUser = JSON.parse(savedSession);
@@ -955,36 +827,72 @@
             }
         }
 
-        function saveLocalUsers() {
+        function saveUsersToLocalOnly() {
             try { localStorage.setItem('park_app_users', JSON.stringify(systemUsers)); } catch (e) {}
-            renderUsersList();
-            lastMutationTime = Date.now();
-            pushCloudStorage();
         }
 
-        function saveLocalVehicles() {
+        function saveVehiclesToLocalOnly() {
             try { localStorage.setItem('park_app_vehicles', JSON.stringify(vehiclesData)); } catch (e) {}
-            renderDashboard();
-            lastMutationTime = Date.now();
-            pushCloudStorage();
         }
 
-        function saveLocalPin() {
-            try { localStorage.setItem('park_app_delete_pin', systemDeletePin); } catch (e) {}
-            const pinInput = document.getElementById('adminPinInput');
-            if (pinInput) pinInput.value = systemDeletePin;
-            lastMutationTime = Date.now();
-            pushCloudStorage();
-        }
+        window.handleLoginSubmit = function(e) {
+            if (e) e.preventDefault();
+            
+            const uInput = document.getElementById('loginUsername');
+            const pInput = document.getElementById('loginPassword');
+            const rInput = document.getElementById('loginRoomCode');
+            if (!uInput || !pInput) return;
 
-        function setSystemStatus(text, color) {
-            const dot = document.getElementById('syncStatusDot');
-            const label = document.getElementById('syncStatusText');
-            if (dot && label) {
-                label.innerText = text;
-                dot.className = color === 'emerald' ? 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse' : 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+            const username = uInput.value.trim().toLowerCase();
+            const password = pInput.value.trim();
+            const roomCode = rInput ? (rInput.value.trim() || 'asamblea2026') : 'asamblea2026';
+
+            currentRoomCode = roomCode.toLowerCase();
+            localStorage.setItem('park_app_room_code', currentRoomCode);
+            initRealtimeSyncEngine(currentRoomCode);
+
+            let foundUser = systemUsers.find(u => 
+                u && u.username && u.username.toLowerCase() === username && u.password === password
+            );
+
+            // Verificación contra cuentas predeterminadas de fábrica
+            if (!foundUser) {
+                foundUser = DEFAULT_USERS.find(u => 
+                    u.username.toLowerCase() === username && u.password === password
+                );
             }
-        }
+
+            if (foundUser) {
+                activeStaffUser = foundUser;
+                localStorage.setItem('park_app_active_user', JSON.stringify(foundUser));
+
+                document.getElementById('userProfileName').innerText = foundUser.nombre;
+                document.getElementById('userProfileRole').innerText = foundUser.role;
+
+                document.getElementById('viewLogin').classList.add('hidden');
+                document.getElementById('userProfileBar').classList.remove('hidden');
+                document.getElementById('mainNav').classList.remove('hidden');
+
+                applyRolePermissions(foundUser.role);
+                showToast(`Bienvenido/a ${foundUser.nombre}`, "success");
+            } else {
+                showToast("Usuario o contraseña incorrectos", "error");
+            }
+        };
+
+        window.logoutUser = function() {
+            activeStaffUser = null;
+            localStorage.removeItem('park_app_active_user');
+
+            document.getElementById('viewLogin').classList.remove('hidden');
+            document.getElementById('userProfileBar').classList.add('hidden');
+            document.getElementById('mainNav').classList.add('hidden');
+
+            const loginForm = document.querySelector('#viewLogin form');
+            if (loginForm) loginForm.reset();
+
+            showToast("Sesión cerrada correctamente", "info");
+        };
 
         function applyRolePermissions(role) {
             const tabReg = document.getElementById('tabRegisterBtn');
@@ -1065,7 +973,7 @@
             }
         };
 
-        window.handleCreateUserSubmit = async function(e) {
+        window.handleCreateUserSubmit = function(e) {
             e.preventDefault();
             if (!activeStaffUser || activeStaffUser.role !== 'admin') {
                 showToast("Se requieren permisos de Administrador", "error");
@@ -1084,22 +992,23 @@
 
             const newUserObj = { id: 'usr_' + Date.now(), nombre, username, password, role, fechaCreacion: new Date().toISOString() };
             systemUsers.push(newUserObj);
-            saveLocalUsers();
+            saveUsersToLocalOnly();
+            renderUsersList();
+
+            // Broadcast real-time user creation
+            broadcastSyncMessage('USER_CREATED', newUserObj);
 
             showToast(`Usuario "${username}" con rol "${role}" creado correctamente`, "success");
             e.target.reset();
-
-            await pushCloudStorage();
         };
 
         window.deleteStaffUser = function(userId) {
             if (!activeStaffUser || activeStaffUser.role !== 'admin') return;
-            if (!deletedUserIds.includes(userId)) {
-                deletedUserIds.push(userId);
-                localStorage.setItem('park_app_deleted_user_ids', JSON.stringify(deletedUserIds));
-            }
             systemUsers = systemUsers.filter(u => u.id !== userId);
-            saveLocalUsers();
+            saveUsersToLocalOnly();
+            renderUsersList();
+
+            broadcastSyncMessage('USER_DELETED', { id: userId });
             showToast("Usuario eliminado correctamente", "info");
         };
 
@@ -1127,11 +1036,11 @@
                             </button>
                         </div>
                     </div>
-                    ${u.username !== 'admin' ? `
+                    ${(u.username !== 'admin' && u.username !== 'registrador' && u.username !== 'controlador') ? `
                         <button onclick="deleteStaffUser('${u.id}')" title="Eliminar usuario" class="text-rose-400 hover:text-rose-300 p-1.5 rounded bg-rose-500/10 hover:bg-rose-500/20 transition">
                             <i class="fa-solid fa-user-minus"></i>
                         </button>
-                    ` : '<span class="text-[10px] text-slate-500 font-bold px-2">Principal</span>'}
+                    ` : '<span class="text-[10px] text-slate-500 font-bold px-2">Sistema</span>'}
                 </div>
             `).join('');
         }
@@ -1147,7 +1056,8 @@
             const val = document.getElementById('adminPinInput').value.trim().toUpperCase();
             if (val.length === 4) {
                 systemDeletePin = val;
-                saveLocalPin();
+                localStorage.setItem('park_app_delete_pin', systemDeletePin);
+                broadcastSyncMessage('PIN_UPDATED', { pin: systemDeletePin });
                 showToast("Clave de borrado de 4 dígitos actualizada", "success");
             } else {
                 showToast("La clave debe contener exactamente 4 caracteres", "error");
@@ -1157,12 +1067,9 @@
         window.promptResetAllVehicles = function() {
             if (confirm("¿Está seguro de borrar permanentemente TODOS los vehículos registrados para iniciar un evento limpio desde cero?")) {
                 vehiclesData = [];
-                lastClearedAt = Date.now();
-                localStorage.setItem('park_app_cleared_at', lastClearedAt.toString());
-                localStorage.setItem('park_app_vehicles', JSON.stringify([]));
+                saveVehiclesToLocalOnly();
                 renderDashboard();
-                lastMutationTime = Date.now();
-                pushCloudStorage();
+                broadcastSyncMessage('ALL_VEHICLES_CLEARED', {});
                 showToast("Se han eliminado todos los vehículos registrados", "info");
             }
         };
@@ -1174,14 +1081,10 @@
 
             container.innerHTML = '';
             
-            const payload = {
-                type: 'PAIRING',
-                users: systemUsers,
-                pin: systemDeletePin
-            };
+            const targetUrl = window.location.origin + window.location.pathname + '#sala=' + currentRoomCode;
 
             new QRCode(container, {
-                text: JSON.stringify(payload),
+                text: targetUrl,
                 width: 180,
                 height: 180,
                 colorDark : "#000000",
@@ -1190,7 +1093,7 @@
             });
 
             display.classList.remove('hidden');
-            showToast("QR de vinculación generado. Escanéelo desde el celular.", "info");
+            showToast("QR de vinculación generado. Escanéelo desde la cámara del celular.", "info");
         };
 
         window.openQrPairingScanner = function() {
@@ -1201,15 +1104,17 @@
             pairingScanner = new Html5QrcodeScanner("pairingQrScanner", { fps: 10, qrbox: 200 });
             pairingScanner.render((scannedText) => {
                 try {
-                    const data = JSON.parse(scannedText);
-                    if (data && data.type === 'PAIRING' && Array.isArray(data.users)) {
-                        systemUsers = mergeUsersList(systemUsers, data.users);
-                        if (data.pin) systemDeletePin = data.pin;
-                        saveLocalUsers();
-                        saveLocalPin();
-                        showToast("¡Celular vinculado con éxito! Usuarios actualizados.", "success");
+                    if (scannedText.includes('sala=')) {
+                        const match = scannedText.match(/sala=([a-zA-Z0-9]+)/);
+                        if (match && match[1]) {
+                            currentRoomCode = match[1].toLowerCase();
+                            document.getElementById('loginRoomCode').value = currentRoomCode;
+                            localStorage.setItem('park_app_room_code', currentRoomCode);
+                            initRealtimeSyncEngine(currentRoomCode);
+                            showToast(`¡Celular vinculado a la sala "${currentRoomCode}"!`, "success");
+                        }
                     } else {
-                        showToast("Código QR de vinculación no válido", "error");
+                        showToast("Código QR no contiene información de sala válida", "error");
                     }
                 } catch (e) {
                     showToast("Error al leer el código QR de vinculación", "error");
@@ -1286,11 +1191,14 @@
             };
 
             vehiclesData.unshift(newVehicle);
-            saveLocalVehicles();
+            saveVehiclesToLocalOnly();
 
             activeSelectedVehicle = newVehicle;
             displayPassResult(newVehicle);
             generateTicketCanvas(newVehicle);
+
+            // Broadcast new vehicle immediately
+            broadcastSyncMessage('VEHICLE_ADDED', newVehicle);
 
             document.getElementById('vehicleForm').reset();
             toggleDiscDetalle(false);
@@ -1462,15 +1370,14 @@
             activeSelectedVehicle.estado = 'autorizado';
             activeSelectedVehicle.fechaAcceso = new Date().toISOString();
 
-            saveLocalVehicles();
+            saveVehiclesToLocalOnly();
 
-            const accessObj = {
-                id: 'acc_' + Date.now(),
+            broadcastSyncMessage('VEHICLE_AUTHORIZED', {
+                id: activeSelectedVehicle.id,
                 patente: activeSelectedVehicle.patente,
-                conductor: activeSelectedVehicle.conductor
-            };
-            lastKnownAccessId = accessObj.id;
-            pushCloudStorage(accessObj);
+                conductor: activeSelectedVehicle.conductor,
+                fechaAcceso: activeSelectedVehicle.fechaAcceso
+            });
 
             showToast(`¡Acceso Autorizado para ${activeSelectedVehicle.patente}!`, "success");
             triggerLiveAccessAlert(activeSelectedVehicle.patente, activeSelectedVehicle.conductor);
@@ -1568,12 +1475,11 @@
         window.confirmDeleteVehicle = function() {
             const inputPin = document.getElementById('deletePinInput').value.trim().toUpperCase();
             if (inputPin === systemDeletePin.toUpperCase()) {
-                if (!deletedVehicleIds.includes(vehicleToDeleteId)) {
-                    deletedVehicleIds.push(vehicleToDeleteId);
-                    localStorage.setItem('park_app_deleted_ids', JSON.stringify(deletedVehicleIds));
-                }
                 vehiclesData = vehiclesData.filter(v => v.id !== vehicleToDeleteId);
-                saveLocalVehicles();
+                saveVehiclesToLocalOnly();
+                renderDashboard();
+
+                broadcastSyncMessage('VEHICLE_DELETED', { id: vehicleToDeleteId });
                 closeDeleteModal();
                 showToast("Vehículo eliminado correctamente", "info");
             } else {
@@ -1629,26 +1535,7 @@
 
         window.onload = function() {
             loadLocalData();
-            
-            // Connect Firebase Firestore listener if active
-            if (firebaseActive && db) {
-                try {
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'syncData', 'mainState');
-                    onSnapshot(docRef, (snapshot) => {
-                        if (snapshot.exists()) {
-                            mergeSyncData(snapshot.data());
-                            setSystemStatus("En Línea (Firebase)", "emerald");
-                        }
-                    }, (err) => {
-                        console.warn("Firestore snapshot warning:", err);
-                    });
-                } catch (e) {
-                    console.warn("Firestore setup warning:", e);
-                }
-            }
-
-            syncCloudStorage(true);
-            setInterval(() => syncCloudStorage(false), 3000);
+            initRealtimeSyncEngine(currentRoomCode);
         };
     </script>
 </body>
