@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Estacionamiento Reservado - Tiempo Real</title>
+    <title>Estacionamiento Reservado - Sincronización Total</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome 6 CDN -->
@@ -42,7 +42,7 @@
                     <div class="flex items-center gap-2 mt-1">
                         <span id="syncStatusDot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
                         <span id="syncStatusText" class="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Conectado en Vivo</span>
-                        <span id="roomTagDisplay" class="text-[9px] bg-slate-800 px-1.5 py-0.5 rounded text-emerald-400 font-mono">Sala: default</span>
+                        <span id="roomTagDisplay" class="text-[9px] bg-slate-800 px-1.5 py-0.5 rounded text-emerald-400 font-mono">Sala: asamblea2026</span>
                     </div>
                 </div>
             </div>
@@ -69,7 +69,7 @@
 
             <!-- User Profile & Manual Sync -->
             <div id="userProfileBar" class="hidden flex items-center gap-3">
-                <button onclick="requestFullStateSync()" title="Forzar Sincronización" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600/80 text-emerald-400 hover:text-white text-xs font-semibold flex items-center gap-1 transition border border-slate-700">
+                <button onclick="requestFullStateSync(true)" title="Sincronizar con la nube" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600/80 text-emerald-400 hover:text-white text-xs font-semibold flex items-center gap-1 transition border border-slate-700">
                     <i class="fa-solid fa-rotate"></i>
                     <span class="hidden sm:inline">Sincronizar</span>
                 </button>
@@ -91,13 +91,13 @@
                     <i class="fa-solid fa-square-parking text-2xl font-black"></i>
                 </div>
                 <h2 class="text-2xl font-black text-white">Acceso al Sistema</h2>
-                <p class="text-xs text-slate-400">Ingrese con su usuario asignado para continuar.</p>
+                <p class="text-xs text-slate-400">Ingrese sus credenciales de operador para continuar.</p>
             </div>
 
             <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Usuario</label>
-                    <input type="text" id="loginUsername" required placeholder="Ej: registrador o admin" autocapitalize="none" autocomplete="off" autocorrect="off" spellcheck="false" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 text-sm font-medium transition">
+                    <input type="text" id="loginUsername" required placeholder="Ej: admin, registrador o controlador" autocapitalize="none" autocomplete="off" autocorrect="off" spellcheck="false" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 text-sm font-medium transition">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">Contraseña</label>
@@ -117,7 +117,11 @@
             </form>
 
             <div class="pt-3 border-t border-slate-800/80 space-y-2 text-center">
-                <button type="button" onclick="openQrPairingScanner()" class="w-full bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold py-2.5 px-3 rounded-xl text-xs border border-amber-500/30 transition flex items-center justify-center gap-2">
+                <button type="button" onclick="requestFullStateSync(true)" class="w-full bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold py-2.5 px-3 rounded-xl text-xs border border-emerald-500/30 transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rotate"></i>
+                    <span>Sincronizar Datos desde la Nube</span>
+                </button>
+                <button type="button" onclick="openQrPairingScanner()" class="w-full bg-slate-800/60 hover:bg-slate-700/60 text-amber-400 font-bold py-2.5 px-3 rounded-xl text-xs border border-amber-500/30 transition flex items-center justify-center gap-2">
                     <i class="fa-solid fa-qrcode"></i>
                     <span>Escanear QR de Vinculación desde la PC</span>
                 </button>
@@ -445,7 +449,7 @@
                     <div class="pt-4 border-t border-slate-800 space-y-2">
                         <div class="flex items-center justify-between">
                             <h3 class="text-xs font-bold uppercase text-slate-400">Usuarios Activos en el Sistema</h3>
-                            <button onclick="requestFullStateSync()" class="text-[11px] text-emerald-400 hover:underline flex items-center gap-1 font-semibold">
+                            <button onclick="requestFullStateSync(true)" class="text-[11px] text-emerald-400 hover:underline flex items-center gap-1 font-semibold">
                                 <i class="fa-solid fa-rotate"></i> Actualizar
                             </button>
                         </div>
@@ -584,6 +588,7 @@
         let html5QrScanner = null;
         let pairingScanner = null;
         let eventSource = null;
+        let pollingInterval = null;
         let currentRoomCode = 'asamblea2026';
         let myDeviceId = 'dev_' + Math.random().toString(36).substr(2, 6);
 
@@ -600,6 +605,10 @@
             if (eventSource) {
                 eventSource.close();
                 eventSource = null;
+            }
+
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
             }
 
             const topicUrl = getSyncTopicUrl(currentRoomCode) + '/json';
@@ -626,17 +635,20 @@
                 };
 
                 eventSource.onerror = function(e) {
-                    setSystemStatus("Reconectando...", "amber");
+                    setSystemStatus("Sincronizando...", "amber");
                 };
-
-                // Request full snapshot from other devices online
-                setTimeout(() => {
-                    broadcastSyncMessage('REQUEST_FULL_STATE', {});
-                }, 500);
 
             } catch (err) {
                 setSystemStatus("Modo Local", "amber");
             }
+
+            // Fetch persistent cloud state instantly on connect
+            requestFullStateSync(false);
+
+            // Set background poll every 4 seconds for mobile devices
+            pollingInterval = setInterval(() => {
+                requestFullStateSync(false);
+            }, 4000);
         }
 
         async function broadcastSyncMessage(eventType, payloadData) {
@@ -661,7 +673,44 @@
             }
         }
 
-        function handleIncomingRemoteEvent(msg) {
+        async function requestFullStateSync(showToastNotice = true) {
+            if (showToastNotice) showToast("Sincronizando datos con la nube...", "info");
+
+            const cleanRoom = (currentRoomCode || 'asamblea2026').trim().toLowerCase();
+            const pollUrl = `${getSyncTopicUrl(cleanRoom)}/json?poll=1`;
+
+            try {
+                const response = await fetch(pollUrl);
+                if (!response.ok) return;
+
+                const text = await response.text();
+                if (!text) return;
+
+                const lines = text.trim().split('\n');
+                let hasUpdates = false;
+
+                lines.forEach(line => {
+                    try {
+                        const parsed = JSON.parse(line);
+                        if (parsed.event === 'message' && parsed.message) {
+                            const payload = JSON.parse(parsed.message);
+                            if (payload) {
+                                handleIncomingRemoteEvent(payload, true);
+                                hasUpdates = true;
+                            }
+                        }
+                    } catch (err) {}
+                });
+
+                if (hasUpdates) {
+                    setSystemStatus("Conectado en Vivo", "emerald");
+                }
+            } catch (err) {
+                console.warn("Sync fetch notice:", err);
+            }
+        }
+
+        function handleIncomingRemoteEvent(msg, isHistoryFetch = false) {
             if (!msg || !msg.type) return;
 
             const type = msg.type;
@@ -682,7 +731,9 @@
                         saveVehiclesToLocalOnly();
                         renderDashboard();
                     }
-                    triggerLiveAccessAlert(data.patente, data.conductor);
+                    if (!isHistoryFetch) {
+                        triggerLiveAccessAlert(data.patente, data.conductor);
+                    }
                 }
             } else if (type === 'VEHICLE_DELETED') {
                 if (data && data.id) {
@@ -694,7 +745,7 @@
                 vehiclesData = [];
                 saveVehiclesToLocalOnly();
                 renderDashboard();
-                showToast("El Administrador vació el registro de vehículos.", "info");
+                if (!isHistoryFetch) showToast("El Administrador vació el registro de vehículos.", "info");
             } else if (type === 'USER_CREATED') {
                 if (data && data.username && !systemUsers.some(u => u.username.toLowerCase() === data.username.toLowerCase())) {
                     systemUsers.push(data);
@@ -714,50 +765,7 @@
                     const pInp = document.getElementById('adminPinInput');
                     if (pInp) pInp.value = systemDeletePin;
                 }
-            } else if (type === 'REQUEST_FULL_STATE') {
-                broadcastSyncMessage('RESPONSE_FULL_STATE', {
-                    vehicles: vehiclesData,
-                    users: systemUsers,
-                    deletePin: systemDeletePin
-                });
-            } else if (type === 'RESPONSE_FULL_STATE') {
-                if (data) {
-                    if (Array.isArray(data.vehicles) && data.vehicles.length > 0) {
-                        const map = new Map();
-                        vehiclesData.forEach(v => map.set(v.id, v));
-                        data.vehicles.forEach(v => {
-                            if (!map.has(v.id)) map.set(v.id, v);
-                            else {
-                                const curr = map.get(v.id);
-                                if (v.estado === 'autorizado') curr.estado = 'autorizado';
-                            }
-                        });
-                        vehiclesData = Array.from(map.values());
-                        vehiclesData.sort((a, b) => new Date(b.fechaRegistro || 0) - new Date(a.fechaRegistro || 0));
-                        saveVehiclesToLocalOnly();
-                        renderDashboard();
-                    }
-                    if (Array.isArray(data.users) && data.users.length > 0) {
-                        const uMap = new Map();
-                        systemUsers.forEach(u => uMap.set(u.username.toLowerCase(), u));
-                        data.users.forEach(u => uMap.set(u.username.toLowerCase(), u));
-                        systemUsers = Array.from(uMap.values());
-                        saveUsersToLocalOnly();
-                        renderUsersList();
-                    }
-                    if (data.deletePin) {
-                        systemDeletePin = data.deletePin;
-                        localStorage.setItem('park_app_delete_pin', systemDeletePin);
-                        const pInp = document.getElementById('adminPinInput');
-                        if (pInp) pInp.value = systemDeletePin;
-                    }
-                }
             }
-        }
-
-        function requestFullStateSync() {
-            showToast("Sincronizando datos en tiempo real...", "info");
-            broadcastSyncMessage('REQUEST_FULL_STATE', {});
         }
 
         function setSystemStatus(text, color) {
@@ -776,7 +784,6 @@
                     systemUsers = JSON.parse(storedUsers);
                 }
                 
-                // Asegurar cuentas por defecto
                 DEFAULT_USERS.forEach(defU => {
                     if (!systemUsers.some(u => u && u.username && u.username.toLowerCase() === defU.username.toLowerCase())) {
                         systemUsers.unshift(defU);
@@ -796,7 +803,6 @@
                     if (rInp) rInp.value = currentRoomCode;
                 }
 
-                // Check URL Hash for direct pairing
                 if (window.location.hash && window.location.hash.includes('sala=')) {
                     const match = window.location.hash.match(/sala=([a-zA-Z0-9]+)/);
                     if (match && match[1]) {
@@ -805,7 +811,6 @@
                     }
                 }
 
-                // Restaurar sesión iniciada
                 const savedSession = localStorage.getItem('park_app_active_user');
                 if (savedSession) {
                     const sessionUser = JSON.parse(savedSession);
@@ -855,7 +860,6 @@
                 u && u.username && u.username.toLowerCase() === username && u.password === password
             );
 
-            // Verificación contra cuentas predeterminadas de fábrica
             if (!foundUser) {
                 foundUser = DEFAULT_USERS.find(u => 
                     u.username.toLowerCase() === username && u.password === password
@@ -995,7 +999,6 @@
             saveUsersToLocalOnly();
             renderUsersList();
 
-            // Broadcast real-time user creation
             broadcastSyncMessage('USER_CREATED', newUserObj);
 
             showToast(`Usuario "${username}" con rol "${role}" creado correctamente`, "success");
@@ -1197,7 +1200,6 @@
             displayPassResult(newVehicle);
             generateTicketCanvas(newVehicle);
 
-            // Broadcast new vehicle immediately
             broadcastSyncMessage('VEHICLE_ADDED', newVehicle);
 
             document.getElementById('vehicleForm').reset();
