@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Html5Qrcode Scanner Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <!-- QRCodeJS Library for generating QR codes -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <!-- Google Fonts Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     
@@ -39,7 +41,7 @@
                     <h1 class="font-extrabold text-base sm:text-lg tracking-tight text-white leading-none">Estacionamiento Reservado</h1>
                     <div class="flex items-center gap-2 mt-1">
                         <span id="syncStatusDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span id="syncStatusText" class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Sistema Listo</span>
+                        <span id="syncStatusText" class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Modo Local / Nube</span>
                     </div>
                 </div>
             </div>
@@ -81,14 +83,14 @@
         </div>
     </header>
 
-    <div id="viewLogin" class="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6">
+    <div id="viewLogin" class="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6 my-auto">
             <div class="text-center space-y-3">
                 <div class="w-16 h-16 rounded-2xl bg-emerald-500 text-slate-950 flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/20">
                     <i class="fa-solid fa-square-parking text-3xl font-black"></i>
                 </div>
                 <h2 class="text-2xl font-black text-white">Acceso al Sistema</h2>
-                <p class="text-xs text-slate-400">Ingrese su usuario y contraseña otorgados por el administrador para continuar.</p>
+                <p class="text-xs text-slate-400">Ingrese las credenciales otorgadas por el administrador.</p>
             </div>
 
             <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
@@ -106,6 +108,17 @@
                     <span>Iniciar Sesión</span>
                 </button>
             </form>
+
+            <div class="pt-4 border-t border-slate-800/80 space-y-2 text-center">
+                <button onclick="forceSyncNow()" class="w-full bg-slate-800 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 font-bold py-2.5 px-3 rounded-xl text-xs border border-slate-700/80 transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rotate"></i>
+                    <span>Sincronizar Usuarios desde la Nube</span>
+                </button>
+                <button onclick="openQrPairingScanner()" class="w-full bg-slate-800/60 hover:bg-slate-800 text-amber-400 font-bold py-2.5 px-3 rounded-xl text-xs border border-amber-500/30 transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-qrcode"></i>
+                    <span>Vinculación Directa por QR (Escanear PC)</span>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -439,6 +452,27 @@
                 </div>
 
                 <div class="space-y-6">
+                    <!-- Direct QR Pairing Tool -->
+                    <div class="bg-slate-900 border border-amber-500/30 rounded-3xl p-6 space-y-4 shadow-xl">
+                        <div class="border-b border-slate-800 pb-3 flex items-center justify-between">
+                            <div>
+                                <h2 class="text-lg font-bold text-amber-400 flex items-center gap-2">
+                                    <i class="fa-solid fa-qrcode"></i>
+                                    Vinculación Directa por QR
+                                </h2>
+                                <p class="text-xs text-slate-400">Si la red 4G/5G del celular bloquea la nube, escanee este QR desde el teléfono.</p>
+                            </div>
+                            <button onclick="generatePairingQrCode()" class="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold px-3 py-1.5 rounded-xl text-xs transition border border-amber-500/40">
+                                Generar QR
+                            </button>
+                        </div>
+                        
+                        <div id="pairingQrDisplay" class="hidden flex flex-col items-center justify-center p-4 bg-white rounded-2xl mx-auto max-w-[220px]">
+                            <div id="qrCodeCanvas"></div>
+                            <span class="text-[10px] text-slate-800 font-extrabold mt-2 text-center uppercase tracking-wider">Escanear desde Pantalla de Acceso</span>
+                        </div>
+                    </div>
+
                     <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
                         <div class="border-b border-slate-800 pb-3">
                             <h2 class="text-lg font-bold text-white flex items-center gap-2">
@@ -507,9 +541,30 @@
         </div>
     </div>
 
+    <!-- QR Pairing Scanner Modal for Mobile -->
+    <div id="qrPairingModal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl text-center">
+            <h3 class="text-lg font-bold text-white flex items-center justify-center gap-2">
+                <i class="fa-solid fa-qrcode text-amber-400"></i>
+                Vincular Celular con la PC
+            </h3>
+            <p class="text-xs text-slate-400">Apunte la cámara hacia el código QR mostrado en la pantalla de la computadora.</p>
+            
+            <div id="pairingQrScanner" class="overflow-hidden rounded-2xl bg-slate-950 min-h-[220px]"></div>
+
+            <button onclick="closeQrPairingScanner()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition border border-slate-700">
+                Cancelar
+            </button>
+        </div>
+    </div>
+
     <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4 sm:px-0"></div>
 
     <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
         let activeStaffUser = null;
         let systemUsers = [];
         let systemDeletePin = '1234';
@@ -521,10 +576,30 @@
         let vehicleToDeleteId = null;
         let currentTab = 'register';
         let html5QrScanner = null;
+        let pairingScanner = null;
         let lastKnownAccessId = null;
         let lastMutationTime = 0;
 
-        const CLOUD_SYNC_URL = 'https://jsonblob.com/api/jsonBlob/1332822183389020160';
+        // Firebase Fallback Setup
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'estacionamiento-asamblea-app';
+        let db = null;
+        let auth = null;
+        let firebaseActive = false;
+
+        if (typeof __firebase_config !== 'undefined') {
+            try {
+                const firebaseConfig = JSON.parse(__firebase_config);
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                firebaseActive = true;
+            } catch (e) {
+                console.warn("Firebase initialization warning:", e);
+            }
+        }
+
+        // Multi-provider REST endpoints
+        const PRIMARY_CLOUD_URL = 'https://jsonblob.com/api/jsonBlob/1332822183389020160';
 
         function mergeUsersList(localUsers, cloudUsers) {
             const userMap = new Map();
@@ -660,7 +735,7 @@
                 const timeoutMs = isFastLoginSync ? 1500 : 3500;
                 const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-                const res = await fetch(CLOUD_SYNC_URL, { 
+                const res = await fetch(PRIMARY_CLOUD_URL, { 
                     method: 'GET',
                     headers: { 'Accept': 'application/json', 'Cache-Control': 'no-cache' },
                     cache: 'no-store',
@@ -672,7 +747,7 @@
                     const cloudData = await res.json();
                     const needsPushBack = mergeSyncData(cloudData);
 
-                    setSystemStatus("Sistema Listo", "emerald");
+                    setSystemStatus("En Línea / Sincronizado", "emerald");
 
                     if (needsPushBack) {
                         await pushCloudStorage();
@@ -686,18 +761,38 @@
         }
 
         async function pushCloudStorage(lastAccessObj = null) {
-            try {
-                const payload = {
-                    vehicles: vehiclesData,
-                    users: systemUsers,
-                    deletePin: systemDeletePin,
-                    lastClearedAt: lastClearedAt,
-                    deletedVehicleIds: deletedVehicleIds,
-                    deletedUserIds: deletedUserIds,
-                    lastAccess: lastAccessObj || (lastKnownAccessId ? { id: lastKnownAccessId } : null)
-                };
+            const payload = {
+                vehicles: vehiclesData,
+                users: systemUsers,
+                deletePin: systemDeletePin,
+                lastClearedAt: lastClearedAt,
+                deletedVehicleIds: deletedVehicleIds,
+                deletedUserIds: deletedUserIds,
+                lastAccess: lastAccessObj || (lastKnownAccessId ? { id: lastKnownAccessId } : null)
+            };
 
-                let res = await fetch(CLOUD_SYNC_URL, {
+            // 1. Firebase Firestore sync if available
+            if (firebaseActive && db && auth) {
+                try {
+                    if (!auth.currentUser) {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    }
+                    if (auth.currentUser) {
+                        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'syncData', 'mainState');
+                        await setDoc(docRef, payload, { merge: true });
+                    }
+                } catch (fbErr) {
+                    console.warn("Firestore save warning:", fbErr);
+                }
+            }
+
+            // 2. REST Endpoint Sync
+            try {
+                let res = await fetch(PRIMARY_CLOUD_URL, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify(payload)
@@ -711,7 +806,7 @@
                     });
                 }
             } catch (e) {
-                console.warn("Error pushing to cloud:", e);
+                console.warn("Error pushing to cloud REST:", e);
             }
         }
 
@@ -732,12 +827,10 @@
             }
 
             try {
-                // 1. Verificación local inmediata (sin requerir internet)
                 let foundUser = systemUsers.find(u => 
                     u && u.username && u.username.toLowerCase() === username && u.password === password
                 );
 
-                // 2. Si no se encuentra localmente, intentar sincronización con la nube
                 if (!foundUser) {
                     try {
                         await syncCloudStorage(true);
@@ -749,7 +842,6 @@
                     }
                 }
 
-                // 3. Fallback de emergencia para el administrador predeterminado
                 if (!foundUser && username === 'admin' && password === 'admin123') {
                     foundUser = {
                         id: 'admin-default',
@@ -805,9 +897,9 @@
             showToast("Sincronizando con la nube...", "info");
             const success = await syncCloudStorage(true);
             if (success) {
-                showToast(`¡Sincronizado! ${vehiclesData.length} vehículo(s) en total.`, "success");
+                showToast(`¡Sincronizado! ${vehiclesData.length} vehículo(s) y ${systemUsers.length} usuario(s).`, "success");
             } else {
-                showToast("Sincronización local completada", "info");
+                showToast("Sincronización completada con datos guardados", "info");
             }
         };
 
@@ -1072,6 +1164,66 @@
                 lastMutationTime = Date.now();
                 pushCloudStorage();
                 showToast("Se han eliminado todos los vehículos registrados", "info");
+            }
+        };
+
+        window.generatePairingQrCode = function() {
+            const container = document.getElementById('qrCodeCanvas');
+            const display = document.getElementById('pairingQrDisplay');
+            if (!container || !display) return;
+
+            container.innerHTML = '';
+            
+            const payload = {
+                type: 'PAIRING',
+                users: systemUsers,
+                pin: systemDeletePin
+            };
+
+            new QRCode(container, {
+                text: JSON.stringify(payload),
+                width: 180,
+                height: 180,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.L
+            });
+
+            display.classList.remove('hidden');
+            showToast("QR de vinculación generado. Escanéelo desde el celular.", "info");
+        };
+
+        window.openQrPairingScanner = function() {
+            const modal = document.getElementById('qrPairingModal');
+            if (!modal) return;
+            modal.classList.remove('hidden');
+
+            pairingScanner = new Html5QrcodeScanner("pairingQrScanner", { fps: 10, qrbox: 200 });
+            pairingScanner.render((scannedText) => {
+                try {
+                    const data = JSON.parse(scannedText);
+                    if (data && data.type === 'PAIRING' && Array.isArray(data.users)) {
+                        systemUsers = mergeUsersList(systemUsers, data.users);
+                        if (data.pin) systemDeletePin = data.pin;
+                        saveLocalUsers();
+                        saveLocalPin();
+                        showToast("¡Celular vinculado con éxito! Usuarios actualizados.", "success");
+                    } else {
+                        showToast("Código QR de vinculación no válido", "error");
+                    }
+                } catch (e) {
+                    showToast("Error al leer el código QR de vinculación", "error");
+                }
+                closeQrPairingScanner();
+            }, () => {});
+        };
+
+        window.closeQrPairingScanner = function() {
+            const modal = document.getElementById('qrPairingModal');
+            if (modal) modal.classList.add('hidden');
+            if (pairingScanner) {
+                pairingScanner.clear();
+                pairingScanner = null;
             }
         };
 
@@ -1477,6 +1629,24 @@
 
         window.onload = function() {
             loadLocalData();
+            
+            // Connect Firebase Firestore listener if active
+            if (firebaseActive && db) {
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'syncData', 'mainState');
+                    onSnapshot(docRef, (snapshot) => {
+                        if (snapshot.exists()) {
+                            mergeSyncData(snapshot.data());
+                            setSystemStatus("En Línea (Firebase)", "emerald");
+                        }
+                    }, (err) => {
+                        console.warn("Firestore snapshot warning:", err);
+                    });
+                } catch (e) {
+                    console.warn("Firestore setup warning:", e);
+                }
+            }
+
             syncCloudStorage(true);
             setInterval(() => syncCloudStorage(false), 3000);
         };
