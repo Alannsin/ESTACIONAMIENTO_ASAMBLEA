@@ -121,10 +121,6 @@
                     <i class="fa-solid fa-rotate"></i>
                     <span>Sincronizar Usuarios desde la Nube</span>
                 </button>
-                <button type="button" onclick="openQrPairingScanner()" class="w-full bg-slate-800/60 hover:bg-slate-700/60 text-amber-400 font-bold py-2.5 px-3 rounded-xl text-xs border border-amber-500/30 transition flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-qrcode"></i>
-                    <span>Escanear QR de Vinculación desde la PC</span>
-                </button>
             </div>
         </div>
     </div>
@@ -455,27 +451,6 @@
                 </div>
 
                 <div class="space-y-6">
-                    <!-- Direct QR Pairing Tool -->
-                    <div class="bg-slate-900 border border-amber-500/30 rounded-3xl p-6 space-y-4 shadow-xl">
-                        <div class="border-b border-slate-800 pb-3 flex items-center justify-between">
-                            <div>
-                                <h2 class="text-lg font-bold text-amber-400 flex items-center gap-2">
-                                    <i class="fa-solid fa-qrcode"></i>
-                                    Vinculación Directa por QR
-                                </h2>
-                                <p class="text-xs text-slate-400">Escanear este código desde el celular vinculará inmediatamente la sala y usuarios.</p>
-                            </div>
-                            <button onclick="generatePairingQrCode()" class="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold px-3 py-1.5 rounded-xl text-xs transition border border-amber-500/40">
-                                Generar QR
-                            </button>
-                        </div>
-                        
-                        <div id="pairingQrDisplay" class="hidden flex flex-col items-center justify-center p-4 bg-white rounded-2xl mx-auto max-w-[220px]">
-                            <div id="qrCodeCanvas"></div>
-                            <span class="text-[10px] text-slate-800 font-extrabold mt-2 text-center uppercase tracking-wider">Escanear desde Pantalla del Celular</span>
-                        </div>
-                    </div>
-
                     <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
                         <div class="border-b border-slate-800 pb-3">
                             <h2 class="text-lg font-bold text-white flex items-center gap-2">
@@ -498,8 +473,8 @@
                             <i class="fa-solid fa-triangle-exclamation text-lg"></i>
                             <span>Limpiar Todo el Registro</span>
                         </div>
-                        <p class="text-xs text-slate-300">Borra de forma permanente los vehículos cargados para iniciar un nuevo evento con la base de datos limpia de cero (capacidad de 2.000 vehículos).</p>
-                        <button onclick="promptResetAllVehicles()" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 px-4 rounded-xl text-xs shadow transition flex items-center justify-center gap-2">
+                        <p class="text-xs text-slate-300">Borra de forma permanente TODOS los vehículos registrados para iniciar un nuevo evento con la base de datos limpia de cero.</p>
+                        <button onclick="openConfirmResetModal()" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 px-4 rounded-xl text-xs shadow transition flex items-center justify-center gap-2">
                             <i class="fa-solid fa-trash-can"></i>
                             <span>Vaciar Registro Completo de Vehículos</span>
                         </button>
@@ -527,7 +502,28 @@
         </div>
     </div>
 
-    <!-- Delete Vehicle Modal -->
+    <!-- Confirm Wipe All Vehicles Modal -->
+    <div id="confirmResetModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-rose-500/50 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl text-center">
+            <div class="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto text-2xl">
+                <i class="fa-solid fa-trash-can"></i>
+            </div>
+            <div>
+                <h3 class="text-lg font-bold text-white">¿Vaciar todo el registro?</h3>
+                <p class="text-xs text-slate-400 mt-1">Esta acción eliminará en tiempo real TODOS los vehículos cargados en la PC y teléfonos celulares. No se puede deshacer.</p>
+            </div>
+            <div class="grid grid-cols-2 gap-3 pt-2">
+                <button onclick="closeConfirmResetModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 px-4 rounded-xl text-xs transition border border-slate-700">
+                    Cancelar
+                </button>
+                <button onclick="executeClearAllVehicles()" class="bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow">
+                    Sí, Vaciar Todo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Single Vehicle Modal -->
     <div id="deleteVehicleModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
             <div class="text-center space-y-1">
@@ -546,30 +542,13 @@
         </div>
     </div>
 
-    <!-- QR Pairing Scanner Modal for Mobile -->
-    <div id="qrPairingModal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl text-center">
-            <h3 class="text-lg font-bold text-white flex items-center justify-center gap-2">
-                <i class="fa-solid fa-qrcode text-amber-400"></i>
-                Vincular Celular con la PC
-            </h3>
-            <p class="text-xs text-slate-400">Apunte la cámara hacia el código QR mostrado en la pantalla de la computadora.</p>
-            
-            <div id="pairingQrScanner" class="overflow-hidden rounded-2xl bg-slate-950 min-h-[220px]"></div>
-
-            <button onclick="closeQrPairingScanner()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition border border-slate-700">
-                Cancelar
-            </button>
-        </div>
-    </div>
-
     <!-- Toast Notifications Container -->
     <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4 sm:px-0"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const DEFAULT_USERS = [
             { id: 'admin-default', nombre: 'Administrador Principal', username: 'admin', password: 'admin123', role: 'admin' },
@@ -585,17 +564,19 @@
         let vehicleToDeleteId = null;
         let currentTab = 'register';
         let html5QrScanner = null;
-        let pairingScanner = null;
         let activeWebSocket = null;
         let currentRoomCode = 'asamblea2026';
         let myDeviceId = 'dev_' + Math.random().toString(36).substr(2, 6);
         let fbDb = null;
         let fbAuth = null;
         let isCloudConnected = false;
+        let vehiclesUnsubscribe = null;
+        let usersUnsubscribe = null;
+        let configUnsubscribe = null;
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-        // Firebase Setup & Central Realtime Synchronization
+        // Initialize Firebase & Realtime Subscriptions
         try {
             const firebaseConfig = typeof __firebase_config !== 'undefined' 
                 ? JSON.parse(__firebase_config) 
@@ -618,7 +599,7 @@
                 setSystemStatus("Nube Conectada", "emerald");
                 setupFirestoreSubscriptions();
             }).catch(e => {
-                console.warn("Firestore Auth fallback mode active:", e);
+                console.warn("Firestore Auth fallback active:", e);
                 initRealtimeSyncEngine(currentRoomCode);
             });
         } catch (e) {
@@ -629,10 +610,15 @@
         function setupFirestoreSubscriptions() {
             if (!fbDb) return;
 
-            // 1. Vehicles Firestore Live Snapshot
+            // Unsubscribe existing listeners if any
+            if (vehiclesUnsubscribe) vehiclesUnsubscribe();
+            if (usersUnsubscribe) usersUnsubscribe();
+            if (configUnsubscribe) configUnsubscribe();
+
+            // 1. Vehicles Firestore Live Listener
             try {
                 const vehiclesCol = collection(fbDb, 'artifacts', appId, 'public', 'data', 'vehicles');
-                onSnapshot(vehiclesCol, (snapshot) => {
+                vehiclesUnsubscribe = onSnapshot(vehiclesCol, (snapshot) => {
                     const roomVehicles = [];
                     snapshot.docs.forEach((d) => {
                         const data = d.data();
@@ -641,7 +627,7 @@
                         }
                     });
                     
-                    // Order by newest first
+                    // Order newest first
                     roomVehicles.sort((a, b) => new Date(b.fechaRegistro || 0) - new Date(a.fechaRegistro || 0));
                     vehiclesData = roomVehicles;
                     saveVehiclesToLocalOnly();
@@ -649,19 +635,18 @@
                 }, (err) => console.warn("Vehicles sync notice:", err));
             } catch (e) { console.warn("Vehicles collection error:", e); }
 
-            // 2. Users Firestore Live Snapshot
+            // 2. Users Firestore Live Listener
             try {
                 const usersCol = collection(fbDb, 'artifacts', appId, 'public', 'data', 'users');
-                onSnapshot(usersCol, (snapshot) => {
+                usersUnsubscribe = onSnapshot(usersCol, (snapshot) => {
                     const fetchedUsers = [];
                     snapshot.docs.forEach((d) => {
                         const data = d.data();
-                        if (data && data.username) {
+                        if (data && data.username && (data.roomCode === currentRoomCode || !data.roomCode)) {
                             fetchedUsers.push({ ...data, id: d.id });
                         }
                     });
 
-                    // Combine default users with cloud users without duplicates
                     const merged = [...DEFAULT_USERS];
                     fetchedUsers.forEach(u => {
                         if (!merged.some(m => m.username.toLowerCase() === u.username.toLowerCase())) {
@@ -674,10 +659,10 @@
                 }, (err) => console.warn("Users sync notice:", err));
             } catch (e) { console.warn("Users collection error:", e); }
 
-            // 3. Config (PIN) Firestore Live Snapshot
+            // 3. Config (PIN) Firestore Live Listener
             try {
                 const configCol = collection(fbDb, 'artifacts', appId, 'public', 'data', 'config');
-                onSnapshot(configCol, (snapshot) => {
+                configUnsubscribe = onSnapshot(configCol, (snapshot) => {
                     snapshot.docs.forEach((d) => {
                         if (d.id === 'pin_config_' + currentRoomCode) {
                             const data = d.data();
@@ -745,17 +730,40 @@
             broadcastSyncMessage('PIN_UPDATED', { pin: newPin });
         }
 
-        async function clearAllVehiclesFromCloud() {
+        window.openConfirmResetModal = function() {
+            document.getElementById('confirmResetModal').classList.remove('hidden');
+        };
+
+        window.closeConfirmResetModal = function() {
+            document.getElementById('confirmResetModal').classList.add('hidden');
+        };
+
+        window.executeClearAllVehicles = async function() {
+            closeConfirmResetModal();
+            showToast("Eliminando el registro completo...", "info");
+
             if (fbDb && fbAuth && fbAuth.currentUser) {
                 try {
-                    vehiclesData.forEach(async (v) => {
-                        const docRef = doc(fbDb, 'artifacts', appId, 'public', 'data', 'vehicles', v.id);
-                        await deleteDoc(docRef);
+                    const vehiclesCol = collection(fbDb, 'artifacts', appId, 'public', 'data', 'vehicles');
+                    const q = query(vehiclesCol, where("roomCode", "==", currentRoomCode));
+                    const querySnapshot = await getDocs(q);
+                    const deletePromises = [];
+                    querySnapshot.forEach((documentDoc) => {
+                        deletePromises.push(deleteDoc(doc(fbDb, 'artifacts', appId, 'public', 'data', 'vehicles', documentDoc.id)));
                     });
-                } catch(e) { console.warn("Error clearing vehicles from cloud:", e); }
+                    await Promise.all(deletePromises);
+                } catch(e) {
+                    console.warn("Error clearing vehicles from Firestore:", e);
+                }
             }
-            broadcastSyncMessage('ALL_VEHICLES_CLEARED', {});
-        }
+
+            broadcastSyncMessage('ALL_VEHICLES_CLEARED', { roomCode: currentRoomCode, timestamp: Date.now() });
+
+            vehiclesData = [];
+            saveVehiclesToLocalOnly();
+            renderDashboard();
+            showToast("Se han eliminado todos los vehículos registrados", "success");
+        };
 
         function getSyncTopicUrl(roomCode) {
             const cleanRoom = (roomCode || 'asamblea2026').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -956,7 +964,7 @@
             try { localStorage.setItem('park_app_vehicles', JSON.stringify(vehiclesData)); } catch (e) {}
         }
 
-        window.handleLoginSubmit = function(e) {
+        window.handleLoginSubmit = async function(e) {
             if (e) e.preventDefault();
             
             const uInput = document.getElementById('loginUsername');
@@ -970,7 +978,27 @@
 
             currentRoomCode = roomCode.toLowerCase();
             localStorage.setItem('park_app_room_code', currentRoomCode);
+            
+            setupFirestoreSubscriptions();
             initRealtimeSyncEngine(currentRoomCode);
+
+            // Fetch live users directly from Firestore before validating credentials
+            if (fbDb) {
+                try {
+                    const usersCol = collection(fbDb, 'artifacts', appId, 'public', 'data', 'users');
+                    const qUsers = query(usersCol, where("roomCode", "==", currentRoomCode));
+                    const usersSnap = await getDocs(qUsers);
+                    usersSnap.forEach(d => {
+                        const u = d.data();
+                        if (u && u.username && !systemUsers.some(x => x.username.toLowerCase() === u.username.toLowerCase())) {
+                            systemUsers.push({ ...u, id: d.id });
+                        }
+                    });
+                    saveUsersToLocalOnly();
+                } catch(err) {
+                    console.warn("Direct user fetch notice:", err);
+                }
+            }
 
             let foundUser = systemUsers.find(u => 
                 u && u.username && u.username.toLowerCase() === username && u.password === password
@@ -1177,16 +1205,6 @@
             }
         };
 
-        window.promptResetAllVehicles = function() {
-            if (confirm("¿Está seguro de borrar permanentemente TODOS los vehículos registrados para iniciar un nuevo evento limpio?")) {
-                clearAllVehiclesFromCloud();
-                vehiclesData = [];
-                saveVehiclesToLocalOnly();
-                renderDashboard();
-                showToast("Se han eliminado todos los vehículos registrados", "info");
-            }
-        };
-
         function generateUnique3Code() {
             const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
             let code = '';
@@ -1378,13 +1396,13 @@
         };
 
         window.searchVehicleCode = function() {
-            const query = document.getElementById('checkerCodeInput').value.trim().toUpperCase();
+            const queryVal = document.getElementById('checkerCodeInput').value.trim().toUpperCase();
             const resBox = document.getElementById('checkerResultBox');
             const notFound = document.getElementById('checkerNotFound');
 
-            if (!query) return;
+            if (!queryVal) return;
 
-            const match = vehiclesData.find(v => v.codigo.toUpperCase() === query || v.patente.toUpperCase() === query);
+            const match = vehiclesData.find(v => v.codigo.toUpperCase() === queryVal || v.patente.toUpperCase() === queryVal);
 
             if (match) {
                 activeSelectedVehicle = match;
@@ -1500,12 +1518,12 @@
         }
 
         window.filterDashboardTable = function() {
-            const query = document.getElementById('dashSearchInput').value.trim().toLowerCase();
+            const queryVal = document.getElementById('dashSearchInput').value.trim().toLowerCase();
             const rows = document.querySelectorAll('#vehiclesTableBody tr');
 
             rows.forEach(row => {
                 const text = row.innerText.toLowerCase();
-                row.style.display = text.includes(query) ? '' : 'none';
+                row.style.display = text.includes(queryVal) ? '' : 'none';
             });
         };
 
