@@ -570,55 +570,46 @@
         let fbDb = null;
         let fbAuth = null;
         let isCloudConnected = false;
-        let vehiclesUnsubscribe = null;
-        let usersUnsubscribe = null;
-        let configUnsubscribe = null;
+        let lastClearTime = 0;
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-        // Initialize Firebase & Realtime Subscriptions
+        // Initialize Firebase if running in managed environment
         try {
-            const firebaseConfig = typeof __firebase_config !== 'undefined' 
-                ? JSON.parse(__firebase_config) 
-                : { apiKey: "demo", authDomain: "demo.firebaseapp.com", projectId: "demo" };
+            if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                const firebaseConfig = JSON.parse(__firebase_config);
+                const fbApp = initializeApp(firebaseConfig);
+                fbDb = getFirestore(fbApp);
+                fbAuth = getAuth(fbApp);
 
-            const fbApp = initializeApp(firebaseConfig);
-            fbDb = getFirestore(fbApp);
-            fbAuth = getAuth(fbApp);
+                const initAuth = async () => {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(fbAuth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(fbAuth);
+                    }
+                };
 
-            const initAuth = async () => {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(fbAuth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(fbAuth);
-                }
-            };
-
-            initAuth().then(() => {
-                isCloudConnected = true;
-                setSystemStatus("Nube Conectada", "emerald");
-                setupFirestoreSubscriptions();
-            }).catch(e => {
-                console.warn("Firestore Auth fallback active:", e);
+                initAuth().then(() => {
+                    isCloudConnected = true;
+                    setSystemStatus("Nube Conectada", "emerald");
+                    setupFirestoreSubscriptions();
+                }).catch(() => {
+                    initRealtimeSyncEngine(currentRoomCode);
+                });
+            } else {
                 initRealtimeSyncEngine(currentRoomCode);
-            });
+            }
         } catch (e) {
-            console.warn("Firestore Setup fallback:", e);
             initRealtimeSyncEngine(currentRoomCode);
         }
 
         function setupFirestoreSubscriptions() {
             if (!fbDb) return;
 
-            // Unsubscribe existing listeners if any
-            if (vehiclesUnsubscribe) vehiclesUnsubscribe();
-            if (usersUnsubscribe) usersUnsubscribe();
-            if (configUnsubscribe) configUnsubscribe();
-
-            // 1. Vehicles Firestore Live Listener
             try {
                 const vehiclesCol = collection(fbDb, 'artifacts', appId, 'public', 'data', 'vehicles');
-                vehiclesUnsubscribe = onSnapshot(vehiclesCol, (snapshot) => {
+                onSnapshot(vehiclesCol, (snapshot) => {
                     const roomVehicles = [];
                     snapshot.docs.forEach((d) => {
                         const data = d.data();
@@ -627,18 +618,14 @@
                         }
                     });
                     
-                    // Order newest first
                     roomVehicles.sort((a, b) => new Date(b.fechaRegistro || 0) - new Date(a.fechaRegistro || 0));
                     vehiclesData = roomVehicles;
                     saveVehiclesToLocalOnly();
                     renderDashboard();
-                }, (err) => console.warn("Vehicles sync notice:", err));
-            } catch (e) { console.warn("Vehicles collection error:", e); }
+                });
 
-            // 2. Users Firestore Live Listener
-            try {
                 const usersCol = collection(fbDb, 'artifacts', appId, 'public', 'data', 'users');
-                usersUnsubscribe = onSnapshot(usersCol, (snapshot) => {
+                onSnapshot(usersCol, (snapshot) => {
                     const fetchedUsers = [];
                     snapshot.docs.forEach((d) => {
                         const data = d.data();
@@ -656,26 +643,117 @@
                     systemUsers = merged;
                     saveUsersToLocalOnly();
                     renderUsersList();
-                }, (err) => console.warn("Users sync notice:", err));
-            } catch (e) { console.warn("Users collection error:", e); }
+                });
+            } catch (e) {}
+        }
 
-            // 3. Config (PIN) Firestore Live Listener
+        async function pollCloudState() {
+            const cleanRoom = (currentRoomCode || 'asamblea2026').trim().toLowerCase();
+            const pollUrl = `https://ntfy.sh/park_sync_${cleanRoom}/json?poll=1`;
+            
             try {
-                const configCol = collection(fbDb, 'artifacts', appId, 'public', 'data', 'config');
-                configUnsubscribe = onSnapshot(configCol, (snapshot) => {
-                    snapshot.docs.forEach((d) => {
-                        if (d.id === 'pin_config_' + currentRoomCode) {
-                            const data = d.data();
-                            if (data && data.pin) {
-                                systemDeletePin = data.pin;
-                                localStorage.setItem('park_app_delete_pin', systemDeletePin);
-                                const pInp = document.getElementById('adminPinInput');
-                                if (pInp) pInp.value = systemDeletePin;
+                const res = await fetch(pollUrl);
+                if (!res.ok) return;
+                const text = await res.text();
+                const lines = text.split('\n').filter(l => l.trim().length > 0);
+                
+                let fetchedVehicles = [];
+                let fetchedUsers = [];
+                let fetchedPin = null;
+
+                lines.forEach(line => {
+                    try {
+                        const item = JSON.parse(line);
+                        if (item.event === 'message' && item.message) {
+                            const payload = JSON.parse(item.message);
+                            if (!payload || !payload.type) return;
+
+                            if (payload.type === 'ALL_VEHICLES_CLEARED') {
+                                if (payload.timestamp > lastClearTime) {
+                                    lastClearTime = payload.timestamp;
+                                    fetchedVehicles = [];
+                                }
+                            } else if (payload.type === 'STATE_SNAPSHOT') {
+                                if (payload.data) {
+                                    if (payload.data.clearTime && payload.data.clearTime > lastClearTime) {
+                                        lastClearTime = payload.data.clearTime;
+                                        fetchedVehicles = [];
+                                    }
+                                    if (payload.data.vehicles && payload.timestamp >= lastClearTime) {
+                                        payload.data.vehicles.forEach(v => {
+                                            const matchIdx = fetchedVehicles.findIndex(x => x.id === v.id);
+                                            if (matchIdx === -1) {
+                                                fetchedVehicles.push(v);
+                                            } else if (v.estado === 'autorizado') {
+                                                fetchedVehicles[matchIdx].estado = 'autorizado';
+                                            }
+                                        });
+                                    }
+                                    if (payload.data.users) {
+                                        payload.data.users.forEach(u => {
+                                            if (!fetchedUsers.some(x => x.username.toLowerCase() === u.username.toLowerCase())) {
+                                                fetchedUsers.push(u);
+                                            }
+                                        });
+                                    }
+                                    if (payload.data.pin) fetchedPin = payload.data.pin;
+                                }
+                            } else if (payload.type === 'VEHICLE_ADDED' && payload.data) {
+                                if (payload.timestamp >= lastClearTime) {
+                                    if (!fetchedVehicles.some(x => x.id === payload.data.id)) {
+                                        fetchedVehicles.push(payload.data);
+                                    }
+                                }
+                            } else if (payload.type === 'VEHICLE_AUTHORIZED' && payload.data) {
+                                const match = fetchedVehicles.find(x => x.id === payload.data.id);
+                                if (match) match.estado = 'autorizado';
+                            } else if (payload.type === 'VEHICLE_DELETED' && payload.data) {
+                                fetchedVehicles = fetchedVehicles.filter(x => x.id !== payload.data.id);
+                            } else if (payload.type === 'USER_CREATED' && payload.data) {
+                                if (!fetchedUsers.some(x => x.username.toLowerCase() === payload.data.username.toLowerCase())) {
+                                    fetchedUsers.push(payload.data);
+                                }
+                            } else if (payload.type === 'PIN_UPDATED' && payload.data) {
+                                fetchedPin = payload.data.pin;
                             }
                         }
-                    });
-                }, (err) => console.warn("Config sync notice:", err));
-            } catch (e) { console.warn("Config collection error:", e); }
+                    } catch (e) {}
+                });
+
+                // Merge fetched vehicles into active vehiclesData
+                if (lastClearTime > 0) {
+                    vehiclesData = vehiclesData.filter(v => new Date(v.fechaRegistro || 0).getTime() > lastClearTime);
+                }
+
+                fetchedVehicles.forEach(fv => {
+                    const idx = vehiclesData.findIndex(v => v.id === fv.id);
+                    if (idx === -1) {
+                        vehiclesData.push(fv);
+                    } else if (fv.estado === 'autorizado') {
+                        vehiclesData[idx].estado = 'autorizado';
+                    }
+                });
+
+                vehiclesData.sort((a, b) => new Date(b.fechaRegistro || 0) - new Date(a.fechaRegistro || 0));
+
+                fetchedUsers.forEach(fu => {
+                    if (!systemUsers.some(su => su.username.toLowerCase() === fu.username.toLowerCase())) {
+                        systemUsers.push(fu);
+                    }
+                });
+
+                if (fetchedPin) {
+                    systemDeletePin = fetchedPin;
+                    const pInp = document.getElementById('adminPinInput');
+                    if (pInp) pInp.value = systemDeletePin;
+                }
+
+                saveVehiclesToLocalOnly();
+                saveUsersToLocalOnly();
+                renderDashboard();
+                renderUsersList();
+
+            } catch (e) {}
         }
 
         async function saveVehicleToCloud(vehicleObj) {
@@ -684,9 +762,10 @@
                 try {
                     const docRef = doc(fbDb, 'artifacts', appId, 'public', 'data', 'vehicles', vehicleObj.id);
                     await setDoc(docRef, vehicleObj, { merge: true });
-                } catch(e) { console.warn("Error saving vehicle to cloud:", e); }
+                } catch(e) {}
             }
             broadcastSyncMessage('VEHICLE_ADDED', vehicleObj);
+            broadcastStateSnapshot();
         }
 
         async function deleteVehicleFromCloud(vehicleId) {
@@ -694,9 +773,10 @@
                 try {
                     const docRef = doc(fbDb, 'artifacts', appId, 'public', 'data', 'vehicles', vehicleId);
                     await deleteDoc(docRef);
-                } catch(e) { console.warn("Error deleting vehicle from cloud:", e); }
+                } catch(e) {}
             }
             broadcastSyncMessage('VEHICLE_DELETED', { id: vehicleId });
+            broadcastStateSnapshot();
         }
 
         async function saveUserToCloud(userObj) {
@@ -705,19 +785,10 @@
                 try {
                     const docRef = doc(fbDb, 'artifacts', appId, 'public', 'data', 'users', userObj.id);
                     await setDoc(docRef, userObj, { merge: true });
-                } catch(e) { console.warn("Error saving user to cloud:", e); }
+                } catch(e) {}
             }
             broadcastSyncMessage('USER_CREATED', userObj);
-        }
-
-        async function deleteUserFromCloud(userId) {
-            if (fbDb && fbAuth && fbAuth.currentUser) {
-                try {
-                    const docRef = doc(fbDb, 'artifacts', appId, 'public', 'data', 'users', userId);
-                    await deleteDoc(docRef);
-                } catch(e) { console.warn("Error deleting user from cloud:", e); }
-            }
-            broadcastSyncMessage('USER_DELETED', { id: userId });
+            broadcastStateSnapshot();
         }
 
         async function savePinToCloud(newPin) {
@@ -725,9 +796,19 @@
                 try {
                     const docRef = doc(fbDb, 'artifacts', appId, 'public', 'data', 'config', 'pin_config_' + currentRoomCode);
                     await setDoc(docRef, { pin: newPin, roomCode: currentRoomCode }, { merge: true });
-                } catch(e) { console.warn("Error saving PIN to cloud:", e); }
+                } catch(e) {}
             }
             broadcastSyncMessage('PIN_UPDATED', { pin: newPin });
+            broadcastStateSnapshot();
+        }
+
+        function broadcastStateSnapshot() {
+            broadcastSyncMessage('STATE_SNAPSHOT', {
+                vehicles: vehiclesData,
+                users: systemUsers,
+                pin: systemDeletePin,
+                clearTime: lastClearTime
+            });
         }
 
         window.openConfirmResetModal = function() {
@@ -742,6 +823,8 @@
             closeConfirmResetModal();
             showToast("Eliminando el registro completo...", "info");
 
+            lastClearTime = Date.now();
+
             if (fbDb && fbAuth && fbAuth.currentUser) {
                 try {
                     const vehiclesCol = collection(fbDb, 'artifacts', appId, 'public', 'data', 'vehicles');
@@ -752,12 +835,11 @@
                         deletePromises.push(deleteDoc(doc(fbDb, 'artifacts', appId, 'public', 'data', 'vehicles', documentDoc.id)));
                     });
                     await Promise.all(deletePromises);
-                } catch(e) {
-                    console.warn("Error clearing vehicles from Firestore:", e);
-                }
+                } catch(e) {}
             }
 
-            broadcastSyncMessage('ALL_VEHICLES_CLEARED', { roomCode: currentRoomCode, timestamp: Date.now() });
+            broadcastSyncMessage('ALL_VEHICLES_CLEARED', { roomCode: currentRoomCode, timestamp: lastClearTime });
+            broadcastStateSnapshot();
 
             vehiclesData = [];
             saveVehiclesToLocalOnly();
@@ -780,13 +862,15 @@
                 activeWebSocket = null;
             }
 
+            pollCloudState();
+
             const wsUrl = `wss://ntfy.sh/park_sync_${currentRoomCode}/ws`;
             
             try {
                 activeWebSocket = new WebSocket(wsUrl);
 
                 activeWebSocket.onopen = function() {
-                    if (!isCloudConnected) setSystemStatus("WebSocket Activo", "emerald");
+                    if (!isCloudConnected) setSystemStatus("Nube Activa", "emerald");
                 };
 
                 activeWebSocket.onmessage = function(event) {
@@ -842,7 +926,38 @@
             const type = msg.type;
             const data = msg.data;
 
-            if (type === 'VEHICLE_ADDED') {
+            if (type === 'STATE_SNAPSHOT' && data) {
+                if (data.clearTime && data.clearTime > lastClearTime) {
+                    lastClearTime = data.clearTime;
+                    vehiclesData = [];
+                }
+                if (data.vehicles) {
+                    data.vehicles.forEach(v => {
+                        const idx = vehiclesData.findIndex(x => x.id === v.id);
+                        if (idx === -1) {
+                            vehiclesData.push(v);
+                        } else if (v.estado === 'autorizado') {
+                            vehiclesData[idx].estado = 'autorizado';
+                        }
+                    });
+                    vehiclesData.sort((a, b) => new Date(b.fechaRegistro || 0) - new Date(a.fechaRegistro || 0));
+                    saveVehiclesToLocalOnly();
+                    renderDashboard();
+                }
+                if (data.users) {
+                    data.users.forEach(u => {
+                        if (!systemUsers.some(x => x.username.toLowerCase() === u.username.toLowerCase())) {
+                            systemUsers.push(u);
+                        }
+                    });
+                    saveUsersToLocalOnly();
+                    renderUsersList();
+                }
+                if (data.pin) {
+                    systemDeletePin = data.pin;
+                    localStorage.setItem('park_app_delete_pin', systemDeletePin);
+                }
+            } else if (type === 'VEHICLE_ADDED') {
                 if (data && data.id && !vehiclesData.some(v => v.id === data.id)) {
                     vehiclesData.unshift(data);
                     saveVehiclesToLocalOnly();
@@ -866,6 +981,7 @@
                     renderDashboard();
                 }
             } else if (type === 'ALL_VEHICLES_CLEARED') {
+                lastClearTime = msg.timestamp || Date.now();
                 vehiclesData = [];
                 saveVehiclesToLocalOnly();
                 renderDashboard();
@@ -873,12 +989,6 @@
             } else if (type === 'USER_CREATED') {
                 if (data && data.username && !systemUsers.some(u => u.username.toLowerCase() === data.username.toLowerCase())) {
                     systemUsers.push(data);
-                    saveUsersToLocalOnly();
-                    renderUsersList();
-                }
-            } else if (type === 'USER_DELETED') {
-                if (data && data.id) {
-                    systemUsers = systemUsers.filter(u => u.id !== data.id);
                     saveUsersToLocalOnly();
                     renderUsersList();
                 }
@@ -892,11 +1002,11 @@
             }
         }
 
-        window.requestFullStateSync = function(showToastNotice = true) {
+        window.requestFullStateSync = async function(showToastNotice = true) {
             if (showToastNotice) showToast("Actualizando datos con la nube...", "info");
-            if (fbDb) {
-                setupFirestoreSubscriptions();
-            }
+            await pollCloudState();
+            if (fbDb) setupFirestoreSubscriptions();
+            if (showToastNotice) showToast("Datos actualizados correctamente", "success");
         };
 
         function setSystemStatus(text, color) {
@@ -951,9 +1061,7 @@
                         }, 50);
                     }
                 }
-            } catch (e) {
-                console.error("Error loading local data:", e);
-            }
+            } catch (e) {}
         }
 
         function saveUsersToLocalOnly() {
@@ -978,27 +1086,9 @@
 
             currentRoomCode = roomCode.toLowerCase();
             localStorage.setItem('park_app_room_code', currentRoomCode);
-            
-            setupFirestoreSubscriptions();
-            initRealtimeSyncEngine(currentRoomCode);
 
-            // Fetch live users directly from Firestore before validating credentials
-            if (fbDb) {
-                try {
-                    const usersCol = collection(fbDb, 'artifacts', appId, 'public', 'data', 'users');
-                    const qUsers = query(usersCol, where("roomCode", "==", currentRoomCode));
-                    const usersSnap = await getDocs(qUsers);
-                    usersSnap.forEach(d => {
-                        const u = d.data();
-                        if (u && u.username && !systemUsers.some(x => x.username.toLowerCase() === u.username.toLowerCase())) {
-                            systemUsers.push({ ...u, id: d.id });
-                        }
-                    });
-                    saveUsersToLocalOnly();
-                } catch(err) {
-                    console.warn("Direct user fetch notice:", err);
-                }
-            }
+            await pollCloudState();
+            initRealtimeSyncEngine(currentRoomCode);
 
             let foundUser = systemUsers.find(u => 
                 u && u.username && u.username.toLowerCase() === username && u.password === password
@@ -1148,8 +1238,7 @@
             systemUsers = systemUsers.filter(u => u.id !== userId);
             saveUsersToLocalOnly();
             renderUsersList();
-
-            deleteUserFromCloud(userId);
+            broadcastStateSnapshot();
             showToast("Usuario eliminado correctamente", "info");
         };
 
@@ -1443,7 +1532,13 @@
             activeSelectedVehicle.fechaAcceso = new Date().toISOString();
 
             saveVehiclesToLocalOnly();
-            saveVehicleToCloud(activeSelectedVehicle);
+            broadcastSyncMessage('VEHICLE_AUTHORIZED', {
+                id: activeSelectedVehicle.id,
+                patente: activeSelectedVehicle.patente,
+                conductor: activeSelectedVehicle.conductor,
+                fechaAcceso: activeSelectedVehicle.fechaAcceso
+            });
+            broadcastStateSnapshot();
 
             showToast(`¡Acceso Autorizado para ${activeSelectedVehicle.patente}!`, "success");
             triggerLiveAccessAlert(activeSelectedVehicle.patente, activeSelectedVehicle.conductor);
@@ -1602,6 +1697,11 @@
         window.onload = function() {
             loadLocalData();
             initRealtimeSyncEngine(currentRoomCode);
+
+            // Auto-poll in background every 5 seconds to guarantee background synchronization
+            setInterval(() => {
+                pollCloudState();
+            }, 5000);
         };
     </script>
 </body>
