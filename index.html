@@ -42,7 +42,7 @@
                     <h1 class="font-extrabold text-base sm:text-lg tracking-tight text-white leading-none">Estacionamiento Reservado</h1>
                     <div class="flex items-center gap-2 mt-1">
                         <span id="syncStatusDot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span id="syncStatusText" class="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Tiempo Real Activo</span>
+                        <span id="syncStatusText" class="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Nube Sincronizada</span>
                         <span id="roomTagDisplay" class="text-[9px] bg-slate-800 px-1.5 py-0.5 rounded text-emerald-400 font-mono">Sala: asamblea2026</span>
                     </div>
                 </div>
@@ -69,9 +69,9 @@
 
             <!-- User Info Bar & Manual Re-sync -->
             <div id="userProfileBar" class="hidden flex items-center gap-3">
-                <button onclick="requestFullStateSync(true)" title="Forzar sincronización instantánea" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600/80 text-emerald-400 hover:text-white text-xs font-semibold flex items-center gap-1 transition border border-slate-700">
-                    <i class="fa-solid fa-bolt"></i>
-                    <span class="hidden sm:inline">Sync Ahora</span>
+                <button onclick="requestFullStateSync(true)" title="Forzar actualización de datos" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600/80 text-emerald-400 hover:text-white text-xs font-semibold flex items-center gap-1 transition border border-slate-700">
+                    <i class="fa-solid fa-rotate"></i>
+                    <span class="hidden sm:inline">Refrescar</span>
                 </button>
                 <div class="text-right text-xs">
                     <span id="userProfileName" class="block font-bold text-white">Usuario</span>
@@ -569,7 +569,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const DEFAULT_USERS = [
             { id: 'admin-default', nombre: 'Administrador Principal', username: 'admin', password: 'admin123', role: 'admin' },
@@ -578,7 +578,7 @@
         ];
 
         let activeStaffUser = null;
-        let systemUsers = [];
+        let systemUsers = [...DEFAULT_USERS];
         let systemDeletePin = '1234';
         let vehiclesData = [];
         let activeSelectedVehicle = null;
@@ -591,28 +591,170 @@
         let myDeviceId = 'dev_' + Math.random().toString(36).substr(2, 6);
         let fbDb = null;
         let fbAuth = null;
+        let isCloudConnected = false;
 
-        // Firebase Setup Guard
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        // Firebase Setup & Central Realtime Synchronization
         try {
-            if (typeof __firebase_config !== 'undefined') {
-                const firebaseConfig = JSON.parse(__firebase_config);
-                const fbApp = initializeApp(firebaseConfig);
-                fbDb = getFirestore(fbApp);
-                fbAuth = getAuth(fbApp);
+            const firebaseConfig = typeof __firebase_config !== 'undefined' 
+                ? JSON.parse(__firebase_config) 
+                : { apiKey: "demo", authDomain: "demo.firebaseapp.com", projectId: "demo" };
 
-                const initAuth = async () => {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(fbAuth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(fbAuth);
-                    }
-                };
-                initAuth().then(() => {
-                    setupFirestoreRealtimeSync();
-                }).catch(e => console.warn("Firestore auth notice:", e));
-            }
+            const fbApp = initializeApp(firebaseConfig);
+            fbDb = getFirestore(fbApp);
+            fbAuth = getAuth(fbApp);
+
+            const initAuth = async () => {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(fbAuth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(fbAuth);
+                }
+            };
+
+            initAuth().then(() => {
+                isCloudConnected = true;
+                setSystemStatus("Nube Conectada", "emerald");
+                setupFirestoreSubscriptions();
+            }).catch(e => {
+                console.warn("Firestore Auth fallback mode active:", e);
+                initRealtimeSyncEngine(currentRoomCode);
+            });
         } catch (e) {
-            console.warn("Firestore init notice:", e);
+            console.warn("Firestore Setup fallback:", e);
+            initRealtimeSyncEngine(currentRoomCode);
+        }
+
+        function setupFirestoreSubscriptions() {
+            if (!fbDb) return;
+
+            // 1. Vehicles Firestore Live Snapshot
+            try {
+                const vehiclesCol = collection(fbDb, 'artifacts', appId, 'public', 'data', 'vehicles');
+                onSnapshot(vehiclesCol, (snapshot) => {
+                    const roomVehicles = [];
+                    snapshot.docs.forEach((d) => {
+                        const data = d.data();
+                        if (data && (data.roomCode === currentRoomCode || !data.roomCode)) {
+                            roomVehicles.push({ ...data, id: d.id });
+                        }
+                    });
+                    
+                    // Order by newest first
+                    roomVehicles.sort((a, b) => new Date(b.fechaRegistro || 0) - new Date(a.fechaRegistro || 0));
+                    vehiclesData = roomVehicles;
+                    saveVehiclesToLocalOnly();
+                    renderDashboard();
+                }, (err) => console.warn("Vehicles sync notice:", err));
+            } catch (e) { console.warn("Vehicles collection error:", e); }
+
+            // 2. Users Firestore Live Snapshot
+            try {
+                const usersCol = collection(fbDb, 'artifacts', appId, 'public', 'data', 'users');
+                onSnapshot(usersCol, (snapshot) => {
+                    const fetchedUsers = [];
+                    snapshot.docs.forEach((d) => {
+                        const data = d.data();
+                        if (data && data.username) {
+                            fetchedUsers.push({ ...data, id: d.id });
+                        }
+                    });
+
+                    // Combine default users with cloud users without duplicates
+                    const merged = [...DEFAULT_USERS];
+                    fetchedUsers.forEach(u => {
+                        if (!merged.some(m => m.username.toLowerCase() === u.username.toLowerCase())) {
+                            merged.push(u);
+                        }
+                    });
+                    systemUsers = merged;
+                    saveUsersToLocalOnly();
+                    renderUsersList();
+                }, (err) => console.warn("Users sync notice:", err));
+            } catch (e) { console.warn("Users collection error:", e); }
+
+            // 3. Config (PIN) Firestore Live Snapshot
+            try {
+                const configCol = collection(fbDb, 'artifacts', appId, 'public', 'data', 'config');
+                onSnapshot(configCol, (snapshot) => {
+                    snapshot.docs.forEach((d) => {
+                        if (d.id === 'pin_config_' + currentRoomCode) {
+                            const data = d.data();
+                            if (data && data.pin) {
+                                systemDeletePin = data.pin;
+                                localStorage.setItem('park_app_delete_pin', systemDeletePin);
+                                const pInp = document.getElementById('adminPinInput');
+                                if (pInp) pInp.value = systemDeletePin;
+                            }
+                        }
+                    });
+                }, (err) => console.warn("Config sync notice:", err));
+            } catch (e) { console.warn("Config collection error:", e); }
+        }
+
+        async function saveVehicleToCloud(vehicleObj) {
+            vehicleObj.roomCode = currentRoomCode;
+            if (fbDb && fbAuth && fbAuth.currentUser) {
+                try {
+                    const docRef = doc(fbDb, 'artifacts', appId, 'public', 'data', 'vehicles', vehicleObj.id);
+                    await setDoc(docRef, vehicleObj, { merge: true });
+                } catch(e) { console.warn("Error saving vehicle to cloud:", e); }
+            }
+            broadcastSyncMessage('VEHICLE_ADDED', vehicleObj);
+        }
+
+        async function deleteVehicleFromCloud(vehicleId) {
+            if (fbDb && fbAuth && fbAuth.currentUser) {
+                try {
+                    const docRef = doc(fbDb, 'artifacts', appId, 'public', 'data', 'vehicles', vehicleId);
+                    await deleteDoc(docRef);
+                } catch(e) { console.warn("Error deleting vehicle from cloud:", e); }
+            }
+            broadcastSyncMessage('VEHICLE_DELETED', { id: vehicleId });
+        }
+
+        async function saveUserToCloud(userObj) {
+            userObj.roomCode = currentRoomCode;
+            if (fbDb && fbAuth && fbAuth.currentUser) {
+                try {
+                    const docRef = doc(fbDb, 'artifacts', appId, 'public', 'data', 'users', userObj.id);
+                    await setDoc(docRef, userObj, { merge: true });
+                } catch(e) { console.warn("Error saving user to cloud:", e); }
+            }
+            broadcastSyncMessage('USER_CREATED', userObj);
+        }
+
+        async function deleteUserFromCloud(userId) {
+            if (fbDb && fbAuth && fbAuth.currentUser) {
+                try {
+                    const docRef = doc(fbDb, 'artifacts', appId, 'public', 'data', 'users', userId);
+                    await deleteDoc(docRef);
+                } catch(e) { console.warn("Error deleting user from cloud:", e); }
+            }
+            broadcastSyncMessage('USER_DELETED', { id: userId });
+        }
+
+        async function savePinToCloud(newPin) {
+            if (fbDb && fbAuth && fbAuth.currentUser) {
+                try {
+                    const docRef = doc(fbDb, 'artifacts', appId, 'public', 'data', 'config', 'pin_config_' + currentRoomCode);
+                    await setDoc(docRef, { pin: newPin, roomCode: currentRoomCode }, { merge: true });
+                } catch(e) { console.warn("Error saving PIN to cloud:", e); }
+            }
+            broadcastSyncMessage('PIN_UPDATED', { pin: newPin });
+        }
+
+        async function clearAllVehiclesFromCloud() {
+            if (fbDb && fbAuth && fbAuth.currentUser) {
+                try {
+                    vehiclesData.forEach(async (v) => {
+                        const docRef = doc(fbDb, 'artifacts', appId, 'public', 'data', 'vehicles', v.id);
+                        await deleteDoc(docRef);
+                    });
+                } catch(e) { console.warn("Error clearing vehicles from cloud:", e); }
+            }
+            broadcastSyncMessage('ALL_VEHICLES_CLEARED', {});
         }
 
         function getSyncTopicUrl(roomCode) {
@@ -636,8 +778,7 @@
                 activeWebSocket = new WebSocket(wsUrl);
 
                 activeWebSocket.onopen = function() {
-                    setSystemStatus("Tiempo Real Activo", "emerald");
-                    requestFullStateSync(false);
+                    if (!isCloudConnected) setSystemStatus("WebSocket Activo", "emerald");
                 };
 
                 activeWebSocket.onmessage = function(event) {
@@ -653,47 +794,17 @@
                 };
 
                 activeWebSocket.onerror = function() {
-                    setSystemStatus("Reconectando...", "amber");
+                    if (!isCloudConnected) setSystemStatus("Reconectando...", "amber");
                 };
 
                 activeWebSocket.onclose = function() {
                     setTimeout(() => {
-                        if (window.location.hash.includes('sala=')) return;
                         initRealtimeSyncEngine(currentRoomCode);
-                    }, 2000);
+                    }, 3000);
                 };
 
             } catch (err) {
                 setSystemStatus("Modo Local", "amber");
-            }
-        }
-
-        function setupFirestoreRealtimeSync() {
-            if (!fbDb) return;
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            
-            try {
-                const vehiclesCol = collection(fbDb, 'artifacts', appId, 'public', 'data', 'vehicles');
-                onSnapshot(vehiclesCol, (snapshot) => {
-                    snapshot.docChanges().forEach((change) => {
-                        const data = change.doc.data();
-                        if (change.type === "added" || change.type === "modified") {
-                            if (data && data.id) {
-                                const idx = vehiclesData.findIndex(v => v.id === data.id);
-                                if (idx >= 0) vehiclesData[idx] = data;
-                                else vehiclesData.unshift(data);
-                                saveVehiclesToLocalOnly();
-                                renderDashboard();
-                            }
-                        } else if (change.type === "removed") {
-                            vehiclesData = vehiclesData.filter(v => v.id !== change.doc.id);
-                            saveVehiclesToLocalOnly();
-                            renderDashboard();
-                        }
-                    });
-                }, (err) => console.warn("Firestore sync notice:", err));
-            } catch (e) {
-                console.warn("Firestore collection notice:", e);
             }
         }
 
@@ -708,7 +819,6 @@
                 data: payloadData
             };
 
-            // Instant HTTP POST publish to WebSocket channel
             try {
                 fetch(topicUrl, {
                     method: 'POST',
@@ -716,48 +826,9 @@
                     headers: { 'Content-Type': 'text/plain' }
                 }).catch(()=>{});
             } catch (e) {}
-
-            // Firestore mirror publish if enabled
-            if (fbDb && fbAuth && fbAuth.currentUser) {
-                try {
-                    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-                    if (eventType === 'VEHICLE_ADDED' || eventType === 'VEHICLE_AUTHORIZED') {
-                        const docRef = doc(fbDb, 'artifacts', appId, 'public', 'data', 'vehicles', payloadData.id);
-                        setDoc(docRef, payloadData, { merge: true });
-                    }
-                } catch(e){}
-            }
         }
 
-        async function requestFullStateSync(showToastNotice = true) {
-            if (showToastNotice) showToast("Sincronizando datos con la nube...", "info");
-
-            const cleanRoom = (currentRoomCode || 'asamblea2026').trim().toLowerCase();
-            const pollUrl = `${getSyncTopicUrl(cleanRoom)}/json?poll=1`;
-
-            try {
-                const response = await fetch(pollUrl);
-                if (!response.ok) return;
-
-                const text = await response.text();
-                if (!text) return;
-
-                const lines = text.trim().split('\n');
-                lines.forEach(line => {
-                    try {
-                        const parsed = JSON.parse(line);
-                        if (parsed.event === 'message' && parsed.message) {
-                            const payload = JSON.parse(parsed.message);
-                            if (payload) handleIncomingRemoteEvent(payload, true);
-                        }
-                    } catch (err) {}
-                });
-
-                setSystemStatus("Tiempo Real Activo", "emerald");
-            } catch (err) {}
-        }
-
-        function handleIncomingRemoteEvent(msg, isHistoryFetch = false) {
+        function handleIncomingRemoteEvent(msg) {
             if (!msg || !msg.type) return;
 
             const type = msg.type;
@@ -778,9 +849,7 @@
                         saveVehiclesToLocalOnly();
                         renderDashboard();
                     }
-                    if (!isHistoryFetch) {
-                        triggerLiveAccessAlert(data.patente, data.conductor);
-                    }
+                    triggerLiveAccessAlert(data.patente, data.conductor);
                 }
             } else if (type === 'VEHICLE_DELETED') {
                 if (data && data.id) {
@@ -792,7 +861,7 @@
                 vehiclesData = [];
                 saveVehiclesToLocalOnly();
                 renderDashboard();
-                if (!isHistoryFetch) showToast("El Administrador vació el registro de vehículos.", "info");
+                showToast("El Administrador vació el registro de vehículos.", "info");
             } else if (type === 'USER_CREATED') {
                 if (data && data.username && !systemUsers.some(u => u.username.toLowerCase() === data.username.toLowerCase())) {
                     systemUsers.push(data);
@@ -815,6 +884,13 @@
             }
         }
 
+        window.requestFullStateSync = function(showToastNotice = true) {
+            if (showToastNotice) showToast("Actualizando datos con la nube...", "info");
+            if (fbDb) {
+                setupFirestoreSubscriptions();
+            }
+        };
+
         function setSystemStatus(text, color) {
             const dot = document.getElementById('syncStatusDot');
             const label = document.getElementById('syncStatusText');
@@ -828,14 +904,15 @@
             try {
                 const storedUsers = localStorage.getItem('park_app_users');
                 if (storedUsers) {
-                    systemUsers = JSON.parse(storedUsers);
+                    const parsed = JSON.parse(storedUsers);
+                    const merged = [...DEFAULT_USERS];
+                    parsed.forEach(u => {
+                        if (u && u.username && !merged.some(m => m.username.toLowerCase() === u.username.toLowerCase())) {
+                            merged.push(u);
+                        }
+                    });
+                    systemUsers = merged;
                 }
-                
-                DEFAULT_USERS.forEach(defU => {
-                    if (!systemUsers.some(u => u && u.username && u.username.toLowerCase() === defU.username.toLowerCase())) {
-                        systemUsers.unshift(defU);
-                    }
-                });
 
                 const storedVehicles = localStorage.getItem('park_app_vehicles');
                 if (storedVehicles) vehiclesData = JSON.parse(storedVehicles);
@@ -848,14 +925,6 @@
                     currentRoomCode = storedRoom;
                     const rInp = document.getElementById('loginRoomCode');
                     if (rInp) rInp.value = currentRoomCode;
-                }
-
-                if (window.location.hash && window.location.hash.includes('sala=')) {
-                    const match = window.location.hash.match(/sala=([a-zA-Z0-9]+)/);
-                    if (match && match[1]) {
-                        currentRoomCode = match[1].toLowerCase();
-                        localStorage.setItem('park_app_room_code', currentRoomCode);
-                    }
                 }
 
                 const savedSession = localStorage.getItem('park_app_active_user');
@@ -906,12 +975,6 @@
             let foundUser = systemUsers.find(u => 
                 u && u.username && u.username.toLowerCase() === username && u.password === password
             );
-
-            if (!foundUser) {
-                foundUser = DEFAULT_USERS.find(u => 
-                    u.username.toLowerCase() === username && u.password === password
-                );
-            }
 
             if (foundUser) {
                 activeStaffUser = foundUser;
@@ -1046,7 +1109,7 @@
             saveUsersToLocalOnly();
             renderUsersList();
 
-            broadcastSyncMessage('USER_CREATED', newUserObj);
+            saveUserToCloud(newUserObj);
 
             showToast(`Usuario "${username}" con rol "${role}" creado correctamente`, "success");
             e.target.reset();
@@ -1058,7 +1121,7 @@
             saveUsersToLocalOnly();
             renderUsersList();
 
-            broadcastSyncMessage('USER_DELETED', { id: userId });
+            deleteUserFromCloud(userId);
             showToast("Usuario eliminado correctamente", "info");
         };
 
@@ -1107,7 +1170,7 @@
             if (val.length === 4) {
                 systemDeletePin = val;
                 localStorage.setItem('park_app_delete_pin', systemDeletePin);
-                broadcastSyncMessage('PIN_UPDATED', { pin: systemDeletePin });
+                savePinToCloud(systemDeletePin);
                 showToast("Clave de borrado de 4 dígitos actualizada", "success");
             } else {
                 showToast("La clave debe contener exactamente 4 caracteres", "error");
@@ -1115,70 +1178,12 @@
         };
 
         window.promptResetAllVehicles = function() {
-            if (confirm("¿Está seguro de borrar permanentemente TODOS los vehículos registrados para iniciar un evento limpio desde cero?")) {
+            if (confirm("¿Está seguro de borrar permanentemente TODOS los vehículos registrados para iniciar un nuevo evento limpio?")) {
+                clearAllVehiclesFromCloud();
                 vehiclesData = [];
                 saveVehiclesToLocalOnly();
                 renderDashboard();
-                broadcastSyncMessage('ALL_VEHICLES_CLEARED', {});
                 showToast("Se han eliminado todos los vehículos registrados", "info");
-            }
-        };
-
-        window.generatePairingQrCode = function() {
-            const container = document.getElementById('qrCodeCanvas');
-            const display = document.getElementById('pairingQrDisplay');
-            if (!container || !display) return;
-
-            container.innerHTML = '';
-            
-            const targetUrl = window.location.origin + window.location.pathname + '#sala=' + currentRoomCode;
-
-            new QRCode(container, {
-                text: targetUrl,
-                width: 180,
-                height: 180,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.L
-            });
-
-            display.classList.remove('hidden');
-            showToast("QR de vinculación generado. Escanéelo desde la cámara del celular.", "info");
-        };
-
-        window.openQrPairingScanner = function() {
-            const modal = document.getElementById('qrPairingModal');
-            if (!modal) return;
-            modal.classList.remove('hidden');
-
-            pairingScanner = new Html5QrcodeScanner("pairingQrScanner", { fps: 10, qrbox: 200 });
-            pairingScanner.render((scannedText) => {
-                try {
-                    if (scannedText.includes('sala=')) {
-                        const match = scannedText.match(/sala=([a-zA-Z0-9]+)/);
-                        if (match && match[1]) {
-                            currentRoomCode = match[1].toLowerCase();
-                            document.getElementById('loginRoomCode').value = currentRoomCode;
-                            localStorage.setItem('park_app_room_code', currentRoomCode);
-                            initRealtimeSyncEngine(currentRoomCode);
-                            showToast(`¡Celular vinculado a la sala "${currentRoomCode}"!`, "success");
-                        }
-                    } else {
-                        showToast("Código QR no contiene información de sala válida", "error");
-                    }
-                } catch (e) {
-                    showToast("Error al leer el código QR de vinculación", "error");
-                }
-                closeQrPairingScanner();
-            }, () => {});
-        };
-
-        window.closeQrPairingScanner = function() {
-            const modal = document.getElementById('qrPairingModal');
-            if (modal) modal.classList.add('hidden');
-            if (pairingScanner) {
-                pairingScanner.clear();
-                pairingScanner = null;
             }
         };
 
@@ -1188,7 +1193,7 @@
             let isUnique = false;
             let attempts = 0;
 
-            while (!isUnique && attempts < 1000) {
+            while (!isUnique && attempts < 2000) {
                 code = '';
                 for (let i = 0; i < 3; i++) {
                     code += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -1247,7 +1252,7 @@
             displayPassResult(newVehicle);
             generateTicketCanvas(newVehicle);
 
-            broadcastSyncMessage('VEHICLE_ADDED', newVehicle);
+            saveVehicleToCloud(newVehicle);
 
             document.getElementById('vehicleForm').reset();
             toggleDiscDetalle(false);
@@ -1420,13 +1425,7 @@
             activeSelectedVehicle.fechaAcceso = new Date().toISOString();
 
             saveVehiclesToLocalOnly();
-
-            broadcastSyncMessage('VEHICLE_AUTHORIZED', {
-                id: activeSelectedVehicle.id,
-                patente: activeSelectedVehicle.patente,
-                conductor: activeSelectedVehicle.conductor,
-                fechaAcceso: activeSelectedVehicle.fechaAcceso
-            });
+            saveVehicleToCloud(activeSelectedVehicle);
 
             showToast(`¡Acceso Autorizado para ${activeSelectedVehicle.patente}!`, "success");
             triggerLiveAccessAlert(activeSelectedVehicle.patente, activeSelectedVehicle.conductor);
@@ -1524,11 +1523,11 @@
         window.confirmDeleteVehicle = function() {
             const inputPin = document.getElementById('deletePinInput').value.trim().toUpperCase();
             if (inputPin === systemDeletePin.toUpperCase()) {
+                deleteVehicleFromCloud(vehicleToDeleteId);
                 vehiclesData = vehiclesData.filter(v => v.id !== vehicleToDeleteId);
                 saveVehiclesToLocalOnly();
                 renderDashboard();
 
-                broadcastSyncMessage('VEHICLE_DELETED', { id: vehicleToDeleteId });
                 closeDeleteModal();
                 showToast("Vehículo eliminado correctamente", "info");
             } else {
